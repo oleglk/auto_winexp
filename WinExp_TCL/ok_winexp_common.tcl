@@ -92,3 +92,98 @@ proc ::ok_winexp::locate_dst {appName dstWndTitle}  {
   puts "-E- Failed $wndDescr ([llength $wnds] candidate(s))"
   return  0
 }
+
+
+proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
+  variable DST_HWND
+  if { $DST_HWND == "" }  {
+    puts "-E- Destination window not located; cannot create folder ('$dstLeafDirName')"
+    return  0
+  }
+  if { 0 == [raise_wnd_and_send_keys $DST_HWND keySeq}
+}
+
+
+# If 'targetHwnd' given, focuses it; otherwise focuses the latest SPM window
+proc ::ok_winexp::focus_window {context targetHwnd}  {
+  variable APP_NAME
+  set descr [expr {($context != "")? $context : \
+                                "giving focus to $APP_NAME instance"}]
+  if { ![verify_singleton_running $descr] }  {
+    return  0;  # warning already printed
+  }
+
+  # TODO: make it in a cycle !!!
+  twapi::set_foreground_window $targetHwnd
+  after 200
+  twapi::set_focus $targetHwnd
+  after 200
+  set currWnd [twapi::get_foreground_window]
+
+  if { ($currWnd == $targetHwnd }  {
+    puts "-I- Success $descr";    return  1
+  } else {
+    set currWndText [expr {($currWnd != "")? \
+              "'[twapi::get_window_text $currWnd]' ($currWnd)" : "UNKNOWN"}]
+    puts "-E- Focused window $currWndText instead of '[twapi::get_window_text $targetHwnd]' ($targetHwnd)"
+    puts "-E- Failed $descr";     return  0
+  }
+}
+
+
+# Sends given keys while taking care of occurences of {MENU}.
+# If 'targetHwnd' given, first focuses this window
+# Returns handle of resulting window or "" on error.
+# TODO: The sequence of {press-Alt, release-Alt, press-Cmd-Key} is not universal
+proc ::ok_winexp::TODO_send_cmd_keys {keySeqStr descr targetHwnd} {
+  set descr "sending key-sequence {$keySeqStr} for '$descr'"
+  set subSeqList [_split_key_seq_at_alt $keySeqStr]
+  if { 1 == [focus_singleton "focus for $descr" $targetHwnd] }  {
+    set wndBefore [expr {($targetHwnd == 0)? [twapi::get_foreground_window] : \
+                                        $targetHwnd}];   # to detect focus loss
+    after 1000
+    if { [complain_if_focus_moved $wndBefore $descr 1] }  { return  "" }
+    if { 0 == [llength $subSeqList] }   {
+      twapi::send_keys $keySeqStr
+     } else {
+      foreach subSeq $subSeqList  {
+        twapi::send_keys {{MENU}}
+        after 1000;  # wait A LOT after ALT
+        twapi::send_keys $subSeq
+      }
+     }
+    after 500; # avoid an access denied error
+    puts "-I- Success $descr";      return  [twapi::get_foreground_window]
+  }
+  puts "-E- Cannot $descr";         return  ""
+}
+
+
+proc ::ok_winexp::complain_if_focus_moved {wndBefore context mustExist}  {
+  set wndNow [twapi::get_foreground_window]
+  if { $wndBefore == $wndNow }  { return  0 } ;   # OK - didn't move
+  if { !$mustExist && ![twapi::window_exists $wndBefore] }  {
+    puts "-W- Focus moved from deleted window while $context"
+    return  0
+  }
+  puts "-E- Focus moved while $context - from '[twapi::get_window_text $wndBefore]' to '[twapi::get_window_text $wndNow]'"
+  return  1
+}
+
+
+
+
+
+
+proc ::ok_winexp::raise_wnd_and_send_keys {targetHwnd keySeq} {
+  set descr "raising window {$targetHwnd} and sending keys {$keySeq}"
+  twapi::set_foreground_window $targetHwnd
+  after 200
+  twapi::set_focus $targetHwnd
+  after 200
+  if { $targetHwnd == [twapi::get_foreground_window] }  {
+    twapi::send_keys $keySeq
+    puts "-I- Success $descr";  return  1
+  }
+  puts "-E- Failed $descr";     return  0
+}
