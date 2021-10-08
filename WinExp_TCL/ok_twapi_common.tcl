@@ -2,6 +2,10 @@
 
 package require twapi;  #  TODO: check errors
 
+
+set SCRIPT_DIR [file dirname [info script]]
+source [file join $SCRIPT_DIR "ok_utils" "common.tcl"]
+
 namespace eval ::ok_twapi:: {
 
   variable SRC_PID 0;  # pid of the source-directory instance of WinExplorer
@@ -9,7 +13,7 @@ namespace eval ::ok_twapi:: {
   variable SRC_HWND "";     # TOP-LEVEL window handle of SRCDIR WinExplorer
   variable DST_HWND "";     # TOP-LEVEL window handle of DSTDIR WinExplorer
   
-  variable APP_NAME
+  variable WINEXP_APP_NAME
   variable SRC_WND_TITLE
   variable DST_WND_TITLE
   
@@ -22,30 +26,45 @@ namespace eval ::ok_twapi:: {
     # (DO NOT EXPORT:)  start_rc  
 }
 
+namespace import ::ok_utils::*;
 
+
+# Starts WinExplorer  ('exePath') in directory 'srcDirPath'.
 # Example:  ::ok_twapi::start_src {C:/Windows/explorer.exe} {d:\tmp} "Windows-Explorer" {TMP}
 proc ::ok_twapi::start_src {exePath srcDirPath appName srcWndTitle}  {
   variable SRC_PID
   variable SRC_HWND
-  
-  variable APP_NAME
+  variable WINEXP_APP_NAME
   variable SRC_WND_TITLE
 
-  set APP_NAME $appName
+  set WINEXP_APP_NAME $appName
   set SRC_WND_TITLE $srcWndTitle
-  set execDescr "invoking $APP_NAME in directory '$srcDirPath'"
+  set wndsBefore [twapi::find_windows -text "$SRC_WND_TITLE" \
+                                      -toplevel 1 -visible 1]
+  puts "-D- Found [llength $wndsBefore] window(s) with matching title ($SRC_WND_TITLE)"
+                              
+  set execDescr "invoking $WINEXP_APP_NAME in directory '$srcDirPath'"
   if { 0 < [set SRC_PID [exec $exePath [file nativename $srcDirPath] &]] }  {
     puts "-I- Success $execDescr" } else {
     puts "-E- Failed $execDescr";  return  0
   }
-  set wndDescr "locating the window of $APP_NAME"
-  #TODO: treat case of multiple matches
-  if { 0 < [set SRC_HWND [twapi::find_windows -text "$SRC_WND_TITLE" \
-                              -toplevel 1 -visible 1 -single]]  }  {
-    puts "-I- Success $wndDescr"
-  } else {
-    puts "-E- Failed $wndDescr";  return  0
+  set wndDescr "locating the window of $WINEXP_APP_NAME"
+  # treat case of multiple matches
+  for {set attemptsLeft 20} {$attemptsLeft > 0} {incr attemptsLeft -1}  {
+    after 500
+    set wndsAfter [twapi::find_windows -text "$SRC_WND_TITLE" \
+                                        -toplevel 1 -visible 1]
+    if { [llength $wndsAfter] > 0 }  {
+      set wndsNew [ok_subtract_list_from_list $wndsAfter $wndsBefore]
+      if { [llength $wndsNew] == 1 }  {
+        set SRC_HWND [lindex $wndsNew 0]
+        puts "-I- Success $wndDescr"
+        return  $SRC_HWND
+      }
+    } else {
+      set wndsNew [list]
+    }
   }
-
-  return  $SRC_HWND
+  puts "-E- Failed $wndDescr ([llength $wndsNew] candidate(s))"
+  return  0
 }
