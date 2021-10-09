@@ -100,16 +100,20 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
     puts "-E- Destination window not located; cannot create folder ('$dstLeafDirName')"
     return  0
   }
-  if { 0 == [raise_wnd_and_send_keys $DST_HWND keySeq}
+  if { 0 == [raise_wnd_and_send_keys $DST_HWND keySeq} {}
+  if { ("" == [set h [send_cmd_keys "{MENU}hn" $descr 0]]) }  {
+    return  "";  # error already printed
+  }
+
 }
 
 
 # If 'targetHwnd' given, focuses it; otherwise focuses the latest SPM window
 proc ::ok_winexp::focus_window {context targetHwnd}  {
-  variable APP_NAME
+  variable WINEXP_APP_NAME
   set descr [expr {($context != "")? $context : \
-                                "giving focus to $APP_NAME instance"}]
-  if { ![verify_singleton_running $descr] }  {
+                                "giving focus to $WINEXP_APP_NAME instance"}]
+  if { !check_window_existence $targetHwnd] }  {
     return  0;  # warning already printed
   }
 
@@ -135,7 +139,7 @@ proc ::ok_winexp::focus_window {context targetHwnd}  {
 # If 'targetHwnd' given, first focuses this window
 # Returns handle of resulting window or "" on error.
 # TODO: The sequence of {press-Alt, release-Alt, press-Cmd-Key} is not universal
-proc ::ok_winexp::TODO_send_cmd_keys {keySeqStr descr targetHwnd} {
+proc ::ok_winexp::????TODO_send_cmd_keys {keySeqStr descr targetHwnd} {
   set descr "sending key-sequence {$keySeqStr} for '$descr'"
   set subSeqList [_split_key_seq_at_alt $keySeqStr]
   if { 1 == [focus_singleton "focus for $descr" $targetHwnd] }  {
@@ -171,8 +175,37 @@ proc ::ok_winexp::complain_if_focus_moved {wndBefore context mustExist}  {
 }
 
 
+proc ::ok_winexp::check_window_existence {hwnd {loud 1}}  {
+  if { $hwnd == "" }  {
+    puts "-E- check_window_existence got no handle";  return  0
+  }
+  set tclExecResult [catch { ;  # exceptions to detect invalid handles
+    set txt [twapi::get_window_text $hwnd]
+  }  evalExecResult]
+  if { $tclExecResult != 0 } {
+    if { $loud }  {  puts "-I- Window '$hwnd' doesn't exist"  }
+    return  0
+  }
+  return  1
+}
 
 
+proc ::ok_winexp::????TODO_raise_wnd_and_send_menu_cmd_keys {targetHwnd keySeq} {
+  set descr "raising window {$targetHwnd} and sending menu-command keys {$keySeq}"
+  twapi::set_foreground_window $targetHwnd
+  after 200
+  twapi::set_focus $targetHwnd
+  after 200
+  if { $targetHwnd == [twapi::get_foreground_window] }  {
+    #twapi::send_keys $keySeq
+    if { ("" = [set h [send_cmd_keys $keySeq $descr $targetHwnd]]) }  {
+      #puts "-E- Failed $descr"
+      return  "";  # error already printed
+    }
+    puts "-I- Success $descr";  return  $h
+  }
+  puts "-E- Failed $descr";     return  ""
+}
 
 
 proc ::ok_winexp::raise_wnd_and_send_keys {targetHwnd keySeq} {
