@@ -1,6 +1,7 @@
 # ok_winexp_common.tcl - common utilities for TWAPI based automation
 
 package require twapi;  #  TODO: check errors
+package require twapi_clipboard
 
 
 set SCRIPT_DIR [file dirname [info script]]
@@ -105,21 +106,58 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
             focus_window_and_send_cmd_keys "{MENU}hn" $descr $DST_HWND]]) }  {
     return  "";  # error already printed
   }
+  after 1000;  # without delay once saw 2 leading characters lost
   twapi::send_input_text $dstLeafDirName
   twapi::send_keys {{ENTER}}
+  # check for popup upon name conflict
+  after 3000
+  set currWnd [twapi::get_foreground_window]
+  if { $currWnd != $DST_HWND }  {
+    if { $currWnd == "" }   {
+      puts "-E- Unexpected error in $descr";  return  ""
+    }
+    set currWndText [twapi::get_window_text $currWnd]
+    if { $currWndText == "Confirm Folder Replace" }   {
+      twapi::send_keys {y}
+      after 3000;   # TODO: wait_for_window_title_to_raise
+      puts "-I- Assuming folder-replace-confirmation popup closed"
+    } else {
+      puts "-E- Unexpected window focused in $descr";  return  ""
+    }
+  }
   # now enter the new directory
+  set newDirPath [change_path_to_subfolder_in_current_window $dstLeafDirName]
+  set newLeafDirName [file tail $newDirPath]
+  if { ![string equal -nocase $newLeafDirName $dstLeafDirName] }  {
+    puts "-E- Failed attempt to $descr brought into '$newDirPath' instead"
+    return  ""
+  }
+  puts "-I- Success to $descr; new folder path is '$newDirPath'"
+  return  $newDirPath
+}
+
+
+proc ::ok_winexp::read_native_folder_path_in_current_window {}  {
+  # type Alt-d, then copy the path into clipboard
+  twapi::send_keys {%d};  # focus path entry; dir-path should become selected
+  after 3000
+  twapi::send_keys {^c};  # filename-entry (should be selected) => clipboard
+  after 3000
+  set dirPath [::twapi::read_clipboard_text -raw FALSE]
+  return  $dirPath
+}
+
+
+proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName}  {
+  # type Alt-d, then append to the path
+  twapi::send_keys {%d};  # focus path entry; dir-path should become selected
+  after 3000
+  twapi::send_keys {{END}};  # filename-entry should be selected => jump to end
   after 1000
-  twapi::send_keys {{ENTER}}
-  #~ if { "" == [set newDirPath [read_folder_path_in_current_window]] }  {
-    #~ return  ""; # error already printed
-  #~ }
-  #~ set newLeafDirName [file tail $newDirPath]
-  #~ if { ![string equal -nocase $newLeafDirName $dstLeafDirName] }  {
-    #~ puts "-E- Failed attempt to $descr brought into '$newDirPath' instead"
-    #~ return  ""
-  #~ }
-  #~ puts "-I- Success to $descr; new folder path is '$newDirPath'"
-  #~ return  $newDirPath
+  twapi::send_input_text "\\$folderLeafName"
+  after 1000
+  twapi::send_keys {{ENTER}}; 
+  return  [read_native_folder_path_in_current_window]
 }
 
 
@@ -176,6 +214,42 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd} {
   }
   puts "-E- Cannot $descr";         return  ""
 }
+
+
+#~ # Waits with active polling
+#~ # Returns handle of resulting window or "" on error.
+#~ proc ::ok_twapi::wait_for_window_title_to_raise {titleStr matchType}  {
+  #~ return  [wait_for_window_title_to_raise__configurable $titleStr $matchType 500 20000]
+#~ }
+
+
+#~ # Waits with active polling - configurable
+#~ # Returns handle of resulting window or "" on error.
+#~ proc ::ok_twapi::wait_for_window_title_to_raise__configurable { \
+                                        #~ titleStr matchType pollPeriodMsec maxWaitMsec}  {
+  #~ if { $titleStr == "" }  {
+    #~ puts "-E- No title provided for [lindex [info level 0] 0]";   return  ""
+  #~ }
+  #~ set nAttempts [expr {int( ceil(1.0 * $maxWaitMsec / $pollPeriodMsec) )}]
+  #~ if { $nAttempts == 0 }  { set nAttempts 1 }
+  #~ ### after 2000 ;  # unfortunetly need to wait
+  #~ for {set i 1} {$i <= $nAttempts} {incr i 1}   {
+    #~ if { 1 == [verify_current_window_by_title $titleStr $matchType 0] }  {
+      #~ set h [twapi::get_foreground_window]
+      #~ if { ($h != "") && (1 == [twapi::window_visible $h]) }  {
+        #~ puts "-I- Window '$titleStr' did appear after [expr {$i * $pollPeriodMsec}] msec"
+        #~ return  $h
+      #~ }
+    #~ }
+    #~ puts "-D- still waiting for window '$titleStr' - attempt $i of $nAttempts"
+    #~ after $pollPeriodMsec
+  #~ }
+  #~ puts "-E- Window '$titleStr' did not appear after [expr {$nAttempts * $pollPeriodMsec}] msec"
+  #~ set h [twapi::get_foreground_window]
+  #~ set currTitle [expr {($h != "")? [twapi::get_window_text $h]  :  "NONE"}]
+  #~ puts "-E- (The foreground window is '$currTitle')"
+  #~ return  ""
+#~ }
 
 
 # Returns list of subsequences that follow occurences of {MENU}/{ALT}
