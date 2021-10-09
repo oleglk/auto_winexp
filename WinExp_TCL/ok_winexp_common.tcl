@@ -73,6 +73,7 @@ proc ::ok_winexp::start_src {exePath srcDirPath appName srcWndTitle}  {
 
 # Locates (WinExplorer) window with title 'dstWndTitle'.
 # Example:  ::ok_winexp::locate_dst "Windows-Explorer" {TMP}
+# TODO: bug: it can match path fragment and pick wnd with subfolder
 proc ::ok_winexp::locate_dst {appName dstWndTitle}  {
   variable DST_HWND
   variable DST_WND_TITLE
@@ -102,14 +103,31 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
     puts "-E- Destination window not located; cannot $descr"
     return  ""
   }
+  # deselect subfolder(s) then create new one
   if { ("" == [set h [  \
-            focus_window_and_send_cmd_keys "{MENU}hn" $descr $DST_HWND]]) }  {
+            focus_window_and_send_cmd_keys "{MENU}hsn{MENU}hn" $descr $DST_HWND]]) }  {
     return  "";  # error already printed
   }
+  #~ if { 0 == [focus_window "focus for $descr" $DST_HWND] }  {
+      #~ return  "";  # error already printed
+  #~ }
+  #~ foreach keyStr [list {{MENU}} {s} {n} {{MENU}} {h} {n}]  {
+    #~ after 3000;  # 1sec insufficient on Yogabook C930
+    #~ twapi::send_keys $keyStr
+  #~ }
+  #~ # The below fails on Android too. TODO: need to deselect subfolder(s) if any "checked"
+  #~ after 1000;   twapi::send_keys {{MENU}}
+  #~ after 1000;   twapi::send_keys {s}
+  #~ after 1000;   twapi::send_keys {n}
+  #~ after 1000;   twapi::send_keys {{MENU}}
+  #~ after 1000;   twapi::send_keys {h}
+  #~ after 4000;   twapi::send_keys {n}  
+  
   after 1000;  # without delay once saw 2 leading characters lost
   twapi::send_input_text $dstLeafDirName
+  after 1000;  # 
   twapi::send_keys {{ENTER}}
-  # check for popup upon name conflict
+  # check for popup upon name conflict - on Android unsupported
   after 3000
   set currWnd [twapi::get_foreground_window]
   if { $currWnd != $DST_HWND }  {
@@ -126,7 +144,8 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
     }
   }
   # now enter the new directory
-  set newDirPath [change_path_to_subfolder_in_current_window $dstLeafDirName]
+  set newDirPathNt [change_path_to_subfolder_in_current_window $dstLeafDirName]
+  set newDirPath [file normalize $newDirPathNt]
   set newLeafDirName [file tail $newDirPath]
   if { ![string equal -nocase $newLeafDirName $dstLeafDirName] }  {
     puts "-E- Failed attempt to $descr brought into '$newDirPath' instead"
@@ -156,7 +175,8 @@ proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName}  {
   after 1000
   twapi::send_input_text "\\$folderLeafName"
   after 1000
-  twapi::send_keys {{ENTER}}; 
+  twapi::send_keys {{ENTER}}
+  after 1000
   return  [read_native_folder_path_in_current_window]
 }
 
@@ -205,7 +225,7 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd} {
      } else {
       foreach subSeq $subSeqList  {
         twapi::send_keys {{MENU}}
-        after 1000;  # wait A LOT after ALT
+        after 2000;  # wait A LOT after ALT
         twapi::send_keys $subSeq
       }
      }
