@@ -96,15 +96,30 @@ proc ::ok_winexp::locate_dst {appName dstWndTitle}  {
 
 proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
   variable DST_HWND
+  set descr "create subfolder '$dstLeafDirName'"
   if { $DST_HWND == "" }  {
-    puts "-E- Destination window not located; cannot create folder ('$dstLeafDirName')"
-    return  0
+    puts "-E- Destination window not located; cannot $descr"
+    return  ""
   }
-  if { 0 == [raise_wnd_and_send_keys $DST_HWND keySeq} {}
-  if { ("" == [set h [send_cmd_keys "{MENU}hn" $descr 0]]) }  {
+  if { ("" == [set h [  \
+            focus_window_and_send_cmd_keys "{MENU}hn" $descr $DST_HWND]]) }  {
     return  "";  # error already printed
   }
-
+  twapi::send_input_text $dstLeafDirName
+  twapi::send_keys {{ENTER}}
+  # now enter the new directory
+  after 1000
+  twapi::send_keys {{ENTER}}
+  #~ if { "" == [set newDirPath [read_folder_path_in_current_window]] }  {
+    #~ return  ""; # error already printed
+  #~ }
+  #~ set newLeafDirName [file tail $newDirPath]
+  #~ if { ![string equal -nocase $newLeafDirName $dstLeafDirName] }  {
+    #~ puts "-E- Failed attempt to $descr brought into '$newDirPath' instead"
+    #~ return  ""
+  #~ }
+  #~ puts "-I- Success to $descr; new folder path is '$newDirPath'"
+  #~ return  $newDirPath
 }
 
 
@@ -113,7 +128,7 @@ proc ::ok_winexp::focus_window {context targetHwnd}  {
   variable WINEXP_APP_NAME
   set descr [expr {($context != "")? $context : \
                                 "giving focus to $WINEXP_APP_NAME instance"}]
-  if { !check_window_existence $targetHwnd] }  {
+  if { ![check_window_existence $targetHwnd] }  {
     return  0;  # warning already printed
   }
 
@@ -124,7 +139,7 @@ proc ::ok_winexp::focus_window {context targetHwnd}  {
   after 200
   set currWnd [twapi::get_foreground_window]
 
-  if { ($currWnd == $targetHwnd }  {
+  if { $currWnd == $targetHwnd }  {
     puts "-I- Success $descr";    return  1
   } else {
     set currWndText [expr {($currWnd != "")? \
@@ -139,10 +154,10 @@ proc ::ok_winexp::focus_window {context targetHwnd}  {
 # If 'targetHwnd' given, first focuses this window
 # Returns handle of resulting window or "" on error.
 # TODO: The sequence of {press-Alt, release-Alt, press-Cmd-Key} is not universal
-proc ::ok_winexp::????TODO_send_cmd_keys {keySeqStr descr targetHwnd} {
+proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd} {
   set descr "sending key-sequence {$keySeqStr} for '$descr'"
   set subSeqList [_split_key_seq_at_alt $keySeqStr]
-  if { 1 == [focus_singleton "focus for $descr" $targetHwnd] }  {
+  if { 1 == [focus_window "focus for $descr" $targetHwnd] }  {
     set wndBefore [expr {($targetHwnd == 0)? [twapi::get_foreground_window] : \
                                         $targetHwnd}];   # to detect focus loss
     after 1000
@@ -160,6 +175,23 @@ proc ::ok_winexp::????TODO_send_cmd_keys {keySeqStr descr targetHwnd} {
     puts "-I- Success $descr";      return  [twapi::get_foreground_window]
   }
   puts "-E- Cannot $descr";         return  ""
+}
+
+
+# Returns list of subsequences that follow occurences of {MENU}/{ALT}
+# In the case of no occurences of {MENU}/{ALT}, returns empty list
+proc ::ok_winexp::_split_key_seq_at_alt {keySeqStr} {
+  # the idea:  set list [split [string map [list $substring $splitchar] $string] $splitchar]
+  set tmp [string map {\{MENU\} \uFFFF  \{ALT\} \uFFFF} $keySeqStr]
+  if { [string equal $tmp $keySeqStr] }   {
+    return  [list];   # no occurences of {MENU}/{ALT}
+  }
+  set tmpList [split $tmp \uFFFF];  # may have empty elements
+  set subSeqList [list]
+  foreach el $tmpList {
+    if { $el != "" }  { lappend subSeqList $el }
+  }
+  return  $subSeqList
 }
 
 
@@ -190,33 +222,33 @@ proc ::ok_winexp::check_window_existence {hwnd {loud 1}}  {
 }
 
 
-proc ::ok_winexp::????TODO_raise_wnd_and_send_menu_cmd_keys {targetHwnd keySeq} {
-  set descr "raising window {$targetHwnd} and sending menu-command keys {$keySeq}"
-  twapi::set_foreground_window $targetHwnd
-  after 200
-  twapi::set_focus $targetHwnd
-  after 200
-  if { $targetHwnd == [twapi::get_foreground_window] }  {
-    #twapi::send_keys $keySeq
-    if { ("" = [set h [send_cmd_keys $keySeq $descr $targetHwnd]]) }  {
-      #puts "-E- Failed $descr"
-      return  "";  # error already printed
-    }
-    puts "-I- Success $descr";  return  $h
-  }
-  puts "-E- Failed $descr";     return  ""
-}
+#~ proc ::ok_winexp::????TODO_raise_wnd_and_send_menu_cmd_keys {targetHwnd keySeq} {
+  #~ set descr "raising window {$targetHwnd} and sending menu-command keys {$keySeq}"
+  #~ twapi::set_foreground_window $targetHwnd
+  #~ after 200
+  #~ twapi::set_focus $targetHwnd
+  #~ after 200
+  #~ if { $targetHwnd == [twapi::get_foreground_window] }  {
+    #~ #twapi::send_keys $keySeq
+    #~ if { ("" = [set h [send_cmd_keys $keySeq $descr $targetHwnd]]) }  {
+      #~ #puts "-E- Failed $descr"
+      #~ return  "";  # error already printed
+    #~ }
+    #~ puts "-I- Success $descr";  return  $h
+  #~ }
+  #~ puts "-E- Failed $descr";     return  ""
+#~ }
 
 
-proc ::ok_winexp::raise_wnd_and_send_keys {targetHwnd keySeq} {
-  set descr "raising window {$targetHwnd} and sending keys {$keySeq}"
-  twapi::set_foreground_window $targetHwnd
-  after 200
-  twapi::set_focus $targetHwnd
-  after 200
-  if { $targetHwnd == [twapi::get_foreground_window] }  {
-    twapi::send_keys $keySeq
-    puts "-I- Success $descr";  return  1
-  }
-  puts "-E- Failed $descr";     return  0
-}
+#~ proc ::ok_winexp::raise_wnd_and_send_keys {targetHwnd keySeq} {
+  #~ set descr "raising window {$targetHwnd} and sending keys {$keySeq}"
+  #~ twapi::set_foreground_window $targetHwnd
+  #~ after 200
+  #~ twapi::set_focus $targetHwnd
+  #~ after 200
+  #~ if { $targetHwnd == [twapi::get_foreground_window] }  {
+    #~ twapi::send_keys $keySeq
+    #~ puts "-I- Success $descr";  return  1
+  #~ }
+  #~ puts "-E- Failed $descr";     return  0
+#~ }
