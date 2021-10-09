@@ -73,7 +73,6 @@ proc ::ok_winexp::start_src {exePath srcDirPath appName srcWndTitle}  {
 
 # Locates (WinExplorer) window with title 'dstWndTitle'.
 # Example:  ::ok_winexp::locate_dst "Windows-Explorer" {TMP}
-# TODO: bug: it can match path fragment and pick wnd with subfolder
 proc ::ok_winexp::locate_dst {appName dstWndTitle}  {
   variable DST_HWND
   variable DST_WND_TITLE
@@ -83,7 +82,7 @@ proc ::ok_winexp::locate_dst {appName dstWndTitle}  {
   
   for {set attemptsLeft 20} {$attemptsLeft > 0} {incr attemptsLeft -1}  {
     after 500
-    set wnds [twapi::find_windows -text "$DST_WND_TITLE" \
+    set wnds [twapi::find_windows -text "$DST_WND_TITLE" -match string \
                                       -toplevel 1 -visible 1]
     if { [llength $wnds] == 1 }  {
       set DST_HWND [lindex $wnds 0]
