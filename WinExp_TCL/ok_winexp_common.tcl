@@ -315,6 +315,22 @@ proc ::ok_winexp::check_window_existence {hwnd {loud 1}}  {
 }
 
 
+proc ::ok_winexp::find_descendent_by_title {hwnd txtPattern}  {
+  set children [::twapi::get_descendent_windows $hwnd]
+  set tclExecResult [catch { ;  # catch exceptions to skip invalid handles  
+    foreach w $children {
+      set txt [::twapi::get_window_text $w]
+      puts "-I- Check '$txt' "
+      if { 1 == [regexp -- $txtPattern $txt] }  {
+        return  $w
+      }
+    }
+  }  evalExecResult]
+  return  ""; # not found
+}
+
+
+
 #~ proc ::ok_winexp::????TODO_raise_wnd_and_send_menu_cmd_keys {targetHwnd keySeq} {
   #~ set descr "raising window {$targetHwnd} and sending menu-command keys {$keySeq}"
   #~ twapi::set_foreground_window $targetHwnd
