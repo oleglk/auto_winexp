@@ -180,6 +180,27 @@ proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName}  {
 }
 
 
+proc ::ok_winexp::focus_src_and_jump_to_top {}  {
+  variable SRC_HWND
+  if { $SRC_HWND == "" }  {
+    puts "-E- Missing source window - cannot jump to its top"
+    return  ""
+  }
+  return  [focus_window_and_jump_to_top $SRC_HWND]
+}
+
+
+# Safe jump to 1st item: select-all, down, home
+proc ::ok_winexp::focus_window_and_jump_to_top {targetHwnd}  {
+  if { ("" == [set h [  \
+            focus_window_and_send_cmd_keys "{MENU}hsa{DOWN}{HOME}" \
+                                           "jump to top" $targetHwnd]]) }  {
+    return  "";  # error already printed
+  }
+  return  $h
+}
+
+
 # If 'targetHwnd' given, focuses it; otherwise focuses the latest SPM window
 proc ::ok_winexp::focus_window {context targetHwnd}  {
   variable WINEXP_APP_NAME
@@ -231,7 +252,7 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd} {
     after 500; # avoid an access denied error
     puts "-I- Success $descr";      return  [twapi::get_foreground_window]
   }
-  puts "-E- Cannot $descr";         return  ""
+  puts "-E- Failed $descr";         return  ""
 }
 
 
