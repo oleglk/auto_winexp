@@ -40,11 +40,15 @@ proc ::ok_winexp::start_src {exePath srcDirPath appName srcWndTitle}  {
 
   set WINEXP_APP_NAME $appName
   set SRC_WND_TITLE $srcWndTitle
+  set execDescr "invoking $WINEXP_APP_NAME in directory '$srcDirPath'"
+
+  if { ![file isdirectory $srcDirPath] }  {
+    puts "-E- Failed $execDescr - inexistent input directory";  return  0
+  }
   set wndsBefore [twapi::find_windows -text "$SRC_WND_TITLE" \
                                       -toplevel 1 -visible 1]
   puts "-D- Found [llength $wndsBefore] window(s) with matching title ($SRC_WND_TITLE)"
                               
-  set execDescr "invoking $WINEXP_APP_NAME in directory '$srcDirPath'"
   if { 0 < [set SRC_PID [exec $exePath [file nativename $srcDirPath] &]] }  {
     puts "-I- Success $execDescr" } else {
     puts "-E- Failed $execDescr";  return  0
@@ -200,6 +204,27 @@ proc ::ok_winexp::focus_window_and_jump_to_top {targetHwnd}  {
   return  $h
 }
 
+
+# Safe jump to 1st item: select-all, down, home
+proc ::ok_winexp::focus_window_and_copy_first {targetHwnd}  {
+  if { ("" == [set h [  \
+            focus_window_and_send_cmd_keys "{MENU}hsa{DOWN}{HOME}^c" \
+                                           "jump to top" $targetHwnd]]) }  {
+    return  "";  # error already printed
+  }
+  return  $h
+}
+
+
+# Safe jump to 1st item: select-all, down, home
+proc ::ok_winexp::focus_window_and_copy_next {targetHwnd}  {
+  if { ("" == [set h [  \
+            focus_window_and_send_cmd_keys "{DOWN}^c" \
+                                           "copy next file" $targetHwnd]]) }  {
+    return  "";  # error already printed
+  }
+  return  $h
+}
 
 # If 'targetHwnd' given, focuses it; otherwise focuses the latest SPM window
 proc ::ok_winexp::focus_window {context targetHwnd}  {
