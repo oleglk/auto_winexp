@@ -209,7 +209,7 @@ proc ::ok_winexp::focus_window_and_jump_to_top {targetHwnd}  {
 proc ::ok_winexp::focus_window_and_copy_first {targetHwnd}  {
   if { ("" == [set h [  \
             focus_window_and_send_cmd_keys "{MENU}hsa{DOWN}{HOME}^c" \
-                                           "jump to top" $targetHwnd]]) }  {
+                                           "copy first file" $targetHwnd]]) }  {
     return  "";  # error already printed
   }
   return  $h
@@ -221,6 +221,17 @@ proc ::ok_winexp::focus_window_and_copy_next {targetHwnd}  {
   if { ("" == [set h [  \
             focus_window_and_send_cmd_keys "{DOWN}^c" \
                                            "copy next file" $targetHwnd]]) }  {
+    return  "";  # error already printed
+  }
+  return  $h
+}
+
+
+# Safe jump to 1st item: select-all, down, home
+proc ::ok_winexp::focus_window_and_paste {targetHwnd}  {
+  if { ("" == [set h [  \
+            focus_window_and_send_cmd_keys "^v" \
+                                           "paste" $targetHwnd]]) }  {
     return  "";  # error already printed
   }
   return  $h
@@ -375,6 +386,15 @@ proc ::ok_winexp::find_descendent_by_title {hwnd txtPattern}  {
   return  ""; # not found
 }
 
+
+################################################################################
+# source c:/Oleg/Work/DualCam/Auto/auto_winexp/winexp_tcl/ok_winexp_common.tcl
+# ::ok_winexp::start_src {C:/Windows/explorer.exe} {g:\tmp\WinExp\INP1} "Windows-Explorer" {INP1}
+# ::ok_winexp::locate_dst "Windows-Explorer" {OUT1}
+# ::ok_winexp::focus_window_and_copy_first $::ok_winexp::SRC_HWND
+# ::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
+# ::ok_winexp::focus_window_and_copy_next $::ok_winexp::SRC_HWND
+################################################################################
 
 
 #~ proc ::ok_winexp::????TODO_raise_wnd_and_send_menu_cmd_keys {targetHwnd keySeq} {
