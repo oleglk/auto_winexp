@@ -216,11 +216,12 @@ proc ::ok_winexp::focus_window_and_copy_first {targetHwnd}  {
 }
 
 
-# Safe jump to 1st item: select-all, down, home
-proc ::ok_winexp::focus_window_and_copy_next {targetHwnd}  {
+# Safe jump to 1st item: select-all, down-n-times, home
+proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
+  set nm1 [expr $n-1]
   if { ("" == [set h [  \
-            focus_window_and_send_cmd_keys "{DOWN}^c" \
-                                           "copy next file" $targetHwnd]]) }  {
+            focus_window_and_send_cmd_keys "{MENU}hsa{DOWN}{HOME}{DOWN $nm1}" \
+                                           "copy file #$nm1" $targetHwnd]]) }  {
     return  "";  # error already printed
   }
   return  $h
@@ -230,7 +231,7 @@ proc ::ok_winexp::focus_window_and_copy_next {targetHwnd}  {
 # Safe jump to 1st item: select-all, down, home
 proc ::ok_winexp::focus_window_and_paste {targetHwnd}  {
   if { ("" == [set h [  \
-            focus_window_and_send_cmd_keys "^v" \
+            focus_window_and_send_cmd_keys "{MENU}hv" \
                                            "paste" $targetHwnd]]) }  {
     return  "";  # error already printed
   }
@@ -238,7 +239,7 @@ proc ::ok_winexp::focus_window_and_paste {targetHwnd}  {
 }
 
 # If 'targetHwnd' given, focuses it; otherwise focuses the latest SPM window
-proc ::ok_winexp::focus_window {context targetHwnd}  {
+proc ::ok_winexp::focus_window {context targetHwnd {reportSuccess 0}}  {
   variable WINEXP_APP_NAME
   set descr [expr {($context != "")? $context : \
                                 "giving focus to $WINEXP_APP_NAME instance"}]
@@ -254,7 +255,8 @@ proc ::ok_winexp::focus_window {context targetHwnd}  {
   set currWnd [twapi::get_foreground_window]
 
   if { $currWnd == $targetHwnd }  {
-    puts "-I- Success $descr";    return  1
+    if { $reportSuccess }  { puts "-I- Success $descr" }
+    return  1
   } else {
     set currWndText [expr {($currWnd != "")? \
               "'[twapi::get_window_text $currWnd]' ($currWnd)" : "UNKNOWN"}]
@@ -271,7 +273,7 @@ proc ::ok_winexp::focus_window {context targetHwnd}  {
 proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd} {
   set descr "sending key-sequence {$keySeqStr} for '$descr'"
   set subSeqList [_split_key_seq_at_alt $keySeqStr]
-  if { 1 == [focus_window "focus for $descr" $targetHwnd] }  {
+  if { 1 == [focus_window "focus for $descr" $targetHwnd 0] }  {
     set wndBefore [expr {($targetHwnd == 0)? [twapi::get_foreground_window] : \
                                         $targetHwnd}];   # to detect focus loss
     after 1000
@@ -394,6 +396,7 @@ proc ::ok_winexp::find_descendent_by_title {hwnd txtPattern}  {
 # ::ok_winexp::focus_window_and_copy_first $::ok_winexp::SRC_HWND
 # ::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
 # ::ok_winexp::focus_window_and_copy_next $::ok_winexp::SRC_HWND
+# ::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
 ################################################################################
 
 
