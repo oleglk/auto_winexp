@@ -252,12 +252,17 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
   for {set i 1}  {$i <= $nFiles}  {incr i 1}  {
     set descr "copy file #$i out of $nFiles from '$SRC_DIR_PATH'"
     puts "-D- Going to $descr"
-    if { 0 == [focus_window_and_copy_n $SRC_HWND $i] }  {
+    if { "" == [focus_window_and_copy_n $SRC_HWND $i] }  {
       puts "-E- Aborting upon failure to $descr (at source)";       return  0
     }
-    if { 0 == [focus_window_and_paste $DST_HWND] }  {
+    if { "" == [focus_window_and_paste $DST_HWND] }  {
       puts "-E- Aborting upon failure to $descr (at destination)";  return  0
     }
+    #TODO: now there could be a popup - either progress or confirmation request
+    #TODO: track focus moved to popup then back; do restrict max-wait-time
+    # !!! no console print while tracking the popup !!!
+    after 2000;  # OK_TMP
+    ok_pause_console "-- CR to continue --"
     puts "-D- Finished to $descr"
   }
   puts "-I- Done copying $nFiles file(s) from '$SRC_DIR_PATH' to '$DST_WND_TITLE'"
