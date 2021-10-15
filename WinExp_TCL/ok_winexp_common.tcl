@@ -229,7 +229,7 @@ proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
   set keySeq "{MENU}hsa{DOWN}{HOME}[string repeat {{DOWN}} $nm1]{MENU}hco"
   if { ("" == [set h [  \
             focus_window_and_send_cmd_keys $keySeq \
-                                           "copy file #$nm1" $targetHwnd]]) }  {
+                                           "copy file #$n" $targetHwnd]]) }  {
     return  "";  # error already printed
   }
   return  $h
@@ -259,10 +259,11 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
       puts "-E- Aborting upon failure to $descr (at destination)";  return  0
     }
     #TODO: now there could be a popup - either progress or confirmation request
+    ##### (on Android: error instead of confirmation request)
     #TODO: track focus moved to popup then back; do restrict max-wait-time
     # !!! no console print while tracking the popup !!!
     after 2000;  # OK_TMP
-    ok_pause_console "-- CR to continue --"
+    #ok_pause_console "-- CR to continue --"
     puts "-D- Finished to $descr"
   }
   puts "-I- Done copying $nFiles file(s) from '$SRC_DIR_PATH' to '$DST_WND_TITLE'"
@@ -341,14 +342,14 @@ set ::TMP_LAST__subSeq $subSeq
 
 #~ # Waits with active polling
 #~ # Returns handle of resulting window or "" on error.
-#~ proc ::ok_twapi::wait_for_window_title_to_raise {titleStr matchType}  {
+#~ proc ::ok_winexp::wait_for_window_title_to_raise {titleStr matchType}  {
   #~ return  [wait_for_window_title_to_raise__configurable $titleStr $matchType 500 20000]
 #~ }
 
 
 #~ # Waits with active polling - configurable
 #~ # Returns handle of resulting window or "" on error.
-#~ proc ::ok_twapi::wait_for_window_title_to_raise__configurable { \
+#~ proc ::ok_winexp::wait_for_window_title_to_raise__configurable { \
                                         #~ titleStr matchType pollPeriodMsec maxWaitMsec}  {
   #~ if { $titleStr == "" }  {
     #~ puts "-E- No title provided for [lindex [info level 0] 0]";   return  ""
@@ -372,6 +373,42 @@ set ::TMP_LAST__subSeq $subSeq
   #~ set currTitle [expr {($h != "")? [twapi::get_window_text $h]  :  "NONE"}]
   #~ puts "-E- (The foreground window is '$currTitle')"
   #~ return  ""
+#~ }
+
+
+#~ proc ::ok_winexp::verify_current_window_by_title {titleOrPattern matchType {loud 1}}  {
+  #~ set h  [twapi::get_foreground_window]
+  #~ set isMatch [check_window_title $h $titleOrPattern $matchType $loud]
+  #~ if { $isMatch == 0 } {
+    #~ if { $loud }  {
+      #~ set txt [twapi::get_window_text $h]
+      #~ puts "-W- Unexpected foreground window '$txt' - doesn't match '$titleOrPattern'"
+      #~ #puts "[_ok_callstack]"; ::ok_utils::pause; # OK_TMP
+      #~ #ok_twapi::abort_if_key_pressed "q"
+    #~ }
+    #~ return  0
+  #~ }
+  #~ return  1
+#~ }
+
+
+#~ proc ::ok_winexp::check_window_title {hwnd titleOrPattern matchType {loud 1}}  {
+  #~ set tclExecResult [catch { ;  # catch exceptions to skip invalid handles
+    #~ set txt [expr {($hwnd != "")? [twapi::get_window_text $hwnd] \
+                              #~ : "NO-WINDOW-HANDLE"}]
+  #~ }  evalExecResult]
+  #~ if { $tclExecResult != 0 } {
+    #~ if { $loud }  {  puts "-I- Window '$hwnd' doesn't exist"  }
+    #~ return  0
+  #~ }
+  #~ set isMatch [switch $matchType  {
+    #~ {exact}   { expr {$txt == $titleOrPattern} }
+    #~ {nocase}  { string equal -nocase $titleOrPattern $txt }
+    #~ {glob}    { string match $titleOrPattern $txt }
+    #~ {regexp}  { regexp -nocase -- $titleOrPattern $txt }
+    #~ default   { puts "-E- Unsupported matchType '$matchType'";  expr 0  }
+  #~ }]
+  #~ return  $isMatch
 #~ }
 
 
