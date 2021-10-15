@@ -74,3 +74,13 @@ proc ::ok_winexp::AutoWinExp_CmdSeq_Copy3rd {inpPath}  {
   set rc [::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND]
   if { $rc == 0 }   { return  $rc }
 }
+
+
+proc ::ok_winexp::AutoWinExp_CmdSeq_CopyAll {inpPath}  {
+  set rc [::ok_winexp::start_src {C:/Windows/explorer.exe} $inpPath "Windows-Explorer" [file tail $inpPath]]
+  if { $rc == 0 }   { return  $rc }
+  set rc [::ok_winexp::locate_dst "Windows-Explorer" {OUT1}]
+  if { $rc == 0 }   { return  $rc }
+
+  return  [::ok_winexp::copy_all_from_src_to_dst]
+}

@@ -18,6 +18,8 @@ namespace eval ::ok_winexp:: {
   variable SRC_WND_TITLE
   variable DST_WND_TITLE
   
+  variable SRC_DIR_PATH "";   # full path of the source directory
+  
   # pseudo response telling to wait for disappearance, then abort
   variable ok_winexp__WAIT_ABORT_ON_THIS_POPUP "ok_winexp__WAIT_ABORT_ON_THIS_POPUP"
 
@@ -37,6 +39,7 @@ proc ::ok_winexp::start_src {exePath srcDirPath appName srcWndTitle}  {
   variable SRC_HWND
   variable WINEXP_APP_NAME
   variable SRC_WND_TITLE
+  variable SRC_DIR_PATH
 
   set WINEXP_APP_NAME $appName
   set SRC_WND_TITLE $srcWndTitle
@@ -45,6 +48,7 @@ proc ::ok_winexp::start_src {exePath srcDirPath appName srcWndTitle}  {
   if { ![file isdirectory $srcDirPath] }  {
     puts "-E- Failed $execDescr - inexistent input directory";  return  0
   }
+  set SRC_DIR_PATH $srcDirPath
   set wndsBefore [twapi::find_windows -text "$SRC_WND_TITLE" \
                                       -toplevel 1 -visible 1]
   puts "-D- Found [llength $wndsBefore] window(s) with matching title ($SRC_WND_TITLE)"
@@ -231,6 +235,37 @@ proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
   return  $h
 }
 
+
+proc ::ok_winexp::copy_all_from_src_to_dst {}  {
+  variable SRC_HWND
+  variable DST_HWND
+  variable SRC_DIR_PATH
+  variable DST_WND_TITLE
+  # TODO: check if all defined
+  set srcFiles [glob -nocomplain -directory $SRC_DIR_PATH {*}]
+  set nFiles [llength $srcFiles]
+  if { $nFiles == 0 }  {
+    puts "-W- No files to copy from '$SRC_DIR_PATH'";   return 0
+  }
+  
+  puts "-I- Begin copying $nFiles file(s) from '$SRC_DIR_PATH' to '$DST_WND_TITLE'"
+  for {set i 1}  {$i <= $nFiles}  {incr i 1}  {
+    set descr "copy file #$i out of $nFiles from '$SRC_DIR_PATH'"
+    puts "-D- Going to $descr"
+    if { 0 == [focus_window_and_copy_n $SRC_HWND $i] }  {
+      puts "-E- Aborting upon failure to $descr (at source)";       return  0
+    }
+    if { 0 == [focus_window_and_paste $DST_HWND] }  {
+      puts "-E- Aborting upon failure to $descr (at destination)";  return  0
+    }
+    puts "-D- Finished to $descr"
+  }
+  puts "-I- Done copying $nFiles file(s) from '$SRC_DIR_PATH' to '$DST_WND_TITLE'"
+  return  $nFiles
+}
+
+
+################ Utility procedures ############################################
 
 # Safe jump to 1st item: select-all, down, home
 proc ::ok_winexp::focus_window_and_paste {targetHwnd}  {
