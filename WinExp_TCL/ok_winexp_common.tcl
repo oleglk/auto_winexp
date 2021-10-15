@@ -208,7 +208,7 @@ proc ::ok_winexp::focus_window_and_jump_to_top {targetHwnd}  {
 # Safe jump to 1st item: select-all, down, home
 proc ::ok_winexp::focus_window_and_copy_first {targetHwnd}  {
   if { ("" == [set h [  \
-            focus_window_and_send_cmd_keys "{MENU}hsa{DOWN}{HOME}^c" \
+            focus_window_and_send_cmd_keys "{MENU}hsa{DOWN}{HOME}{MENU}hco" \
                                            "copy first file" $targetHwnd]]) }  {
     return  "";  # error already printed
   }
@@ -222,7 +222,7 @@ proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
     return  [focus_window_and_copy_first $targetHwnd]
   }
   set nm1 [expr $n-1]
-  set keySeq "{MENU}hsa{DOWN}{HOME}[string repeat {{DOWN}} $nm1]^c"
+  set keySeq "{MENU}hsa{DOWN}{HOME}[string repeat {{DOWN}} $nm1]{MENU}hco"
   if { ("" == [set h [  \
             focus_window_and_send_cmd_keys $keySeq \
                                            "copy file #$nm1" $targetHwnd]]) }  {
