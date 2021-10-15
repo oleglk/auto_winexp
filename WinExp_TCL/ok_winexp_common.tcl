@@ -218,9 +218,13 @@ proc ::ok_winexp::focus_window_and_copy_first {targetHwnd}  {
 
 # Safe jump to 1st item: select-all, down-n-times, home
 proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
+  if { $n == 1 }  {
+    return  [focus_window_and_copy_first $targetHwnd]
+  }
   set nm1 [expr $n-1]
+  set keySeq "{MENU}hsa{DOWN}{HOME}[string repeat {{DOWN}} $nm1]^c"
   if { ("" == [set h [  \
-            focus_window_and_send_cmd_keys "{MENU}hsa{DOWN}{HOME}{DOWN $nm1}" \
+            focus_window_and_send_cmd_keys $keySeq \
                                            "copy file #$nm1" $targetHwnd]]) }  {
     return  "";  # error already printed
   }
@@ -282,6 +286,7 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd} {
       twapi::send_keys $keySeqStr
      } else {
       foreach subSeq $subSeqList  {
+set ::TMP_LAST__subSeq $subSeq   
         twapi::send_keys {{MENU}}
         after 2000;  # wait A LOT after ALT
         twapi::send_keys $subSeq
@@ -399,6 +404,18 @@ proc ::ok_winexp::find_descendent_by_title {hwnd txtPattern}  {
 # ::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
 ################################################################################
 
+
+proc ::ok_winexp::_Tmp_Sample_Commands {}  {
+source c:/Oleg/Work/DualCam/Auto/auto_winexp/winexp_tcl/ok_winexp_common.tcl
+
+::ok_winexp::start_src {C:/Windows/explorer.exe} {g:\tmp\WinExp\INP1} "Windows-Explorer" {INP1}
+::ok_winexp::locate_dst "Windows-Explorer" {OUT1}
+
+::ok_winexp::focus_window_and_copy_first $::ok_winexp::SRC_HWND
+::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
+::ok_winexp::focus_window_and_copy_n $::ok_winexp::SRC_HWND 2
+::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
+}
 
 #~ proc ::ok_winexp::????TODO_raise_wnd_and_send_menu_cmd_keys {targetHwnd keySeq} {
   #~ set descr "raising window {$targetHwnd} and sending menu-command keys {$keySeq}"
