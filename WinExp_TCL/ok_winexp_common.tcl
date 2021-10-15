@@ -400,22 +400,11 @@ proc ::ok_winexp::find_descendent_by_title {hwnd txtPattern}  {
 # ::ok_winexp::locate_dst "Windows-Explorer" {OUT1}
 # ::ok_winexp::focus_window_and_copy_first $::ok_winexp::SRC_HWND
 # ::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
-# ::ok_winexp::focus_window_and_copy_next $::ok_winexp::SRC_HWND
+#### ::ok_winexp::focus_window_and_copy_next $::ok_winexp::SRC_HWND
+# ::ok_winexp::focus_window_and_copy_n $::ok_winexp::SRC_HWND 2
 # ::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
 ################################################################################
 
-
-proc ::ok_winexp::_Tmp_Sample_Commands {}  {
-source c:/Oleg/Work/DualCam/Auto/auto_winexp/winexp_tcl/ok_winexp_common.tcl
-
-::ok_winexp::start_src {C:/Windows/explorer.exe} {g:\tmp\WinExp\INP1} "Windows-Explorer" {INP1}
-::ok_winexp::locate_dst "Windows-Explorer" {OUT1}
-
-::ok_winexp::focus_window_and_copy_first $::ok_winexp::SRC_HWND
-::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
-::ok_winexp::focus_window_and_copy_n $::ok_winexp::SRC_HWND 2
-::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
-}
 
 #~ proc ::ok_winexp::????TODO_raise_wnd_and_send_menu_cmd_keys {targetHwnd keySeq} {
   #~ set descr "raising window {$targetHwnd} and sending menu-command keys {$keySeq}"
