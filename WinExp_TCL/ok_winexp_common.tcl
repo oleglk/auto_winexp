@@ -110,6 +110,8 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
     puts "-E- Destination window not located; cannot $descr"
     return  ""
   }
+  puts "-I- Begin to $descr on destination"
+  
   # deselect subfolder(s) then create new one
   if { ("" == [set h [  \
             focus_window_and_send_cmd_keys "{MENU}hsn{MENU}hn" $descr $DST_HWND]]) }  {
@@ -314,9 +316,11 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   # TODO: check if all defined
 
   set descr "copy subfolder '$leafDirName'"
+  puts "-I- Begin $descr from '$SRC_DIR_PATH' to '$DST_WND_TITLE'"
+
   # verify the subfolder existence on the source
   set ultimateSrcDirPath [file normalize [file join $SRC_DIR_PATH $leafDirName]]
-  if { ![file isdirectory $srcUltimateDirPath] }  {
+  if { ![file isdirectory $ultimateSrcDirPath] }  {
     puts "-E- Aborting - inexistent input directory '$ultimateSrcDirPath'"
     return  -1
   }
@@ -340,11 +344,19 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   after 1000
 
   # perform the actual copy
-  set copyRC [copy_all_from_src_to_dst]
+  if { "" == [set copyRC [copy_all_from_src_to_dst]] }  {
+    return  -1;  # error already printed
+  }
   
-  # focus the source and return to the parent directory on it
-  if { 0 == [focus_window "focus to return after $descr" $SRC_HWND 0] }  {
-      return  -1;  # error already printed
+  # focus the DESTINATION and return to the parent directory on it
+  if { "" == [focus_window_and_send_cmd_keys {%{LEFT}}  \
+                              "focus dst to return after $descr" $DST_HWND] }  {
+    return  -1;  # error already printed
+  }
+  
+  # focus the SOURCE and return to the parent directory on it
+  if { 0 == [focus_window "focus src to return after $descr" $SRC_HWND 0] }  {
+    return  -1;  # error already printed
   }
   set oldDirPathNorm [file normalize \
                               [change_path_to_subfolder_in_current_window ".."]]
@@ -353,6 +365,7 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
     return  -1
   }
 
+  puts "-I- Done $descr from '$SRC_DIR_PATH' to '$DST_WND_TITLE'"
   return  $copyRC
 }
 
@@ -367,22 +380,27 @@ proc ::ok_winexp::focus_window {context targetHwnd {reportSuccess 0}}  {
     return  0;  # warning already printed
   }
 
-  # TODO: make it in a cycle !!!
-  twapi::set_foreground_window $targetHwnd
-  after 200
-  twapi::set_focus $targetHwnd
-  after 200
-  set currWnd [twapi::get_foreground_window]
-
-  if { $currWnd == $targetHwnd }  {
-    if { $reportSuccess }  { puts "-I- Success $descr" }
-    return  1
-  } else {
-    set currWndText [expr {($currWnd != "")? \
-              "'[twapi::get_window_text $currWnd]' ($currWnd)" : "UNKNOWN"}]
-    puts "-E- Focused window $currWndText instead of '[twapi::get_window_text $targetHwnd]' ($targetHwnd)"
-    puts "-E- Failed $descr";     return  0
+  puts "-D- Going to focus window {$targetHwnd} for $context"
+  # try raising the window during 8 seconds
+  for {set i 1}  {$i <= 20}  {incr i 1}  { ;  
+    twapi::set_foreground_window $targetHwnd
+    after 200
+    twapi::set_focus $targetHwnd
+    after 200
+    if { $targetHwnd == [set currWnd [twapi::get_foreground_window]] }  {
+      if { $reportSuccess }  { puts "-I- Success $descr" }
+      return  1
+    }
+    if { $i > 5 }  {; # if window still "stuck" after 2sec minimize-restore
+      twapi::minimize_window $targetHwnd -sync
+      twapi::restore_window  $targetHwnd -sync
+    }
   }
+  set currWndText [expr {($currWnd != "")? \
+            "'[twapi::get_window_text $currWnd]' ($currWnd)" : "UNKNOWN"}]
+  puts "-E- Focused window $currWndText instead of '[twapi::get_window_text $targetHwnd]' ($targetHwnd)"
+  puts "-E- Failed $descr"
+  return  0
 }
 
 
