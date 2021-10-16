@@ -289,6 +289,7 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
     if { "" == [focus_window_and_copy_n $SRC_HWND $i] }  {
       puts "-E- Aborting upon failure to $descr (at source)";       return  -1
     }
+    after 2000
     if { "" == [focus_window_and_paste $DST_HWND] }  {
       puts "-E- Aborting upon failure to $descr (at destination)";  return  -1
     }
@@ -348,11 +349,19 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
     return  -1;  # error already printed
   }
   
+  after 1000
   # focus the DESTINATION and return to the parent directory on it
-  if { "" == [focus_window_and_send_cmd_keys {%{LEFT}}  \
-                              "focus dst to return after $descr" $DST_HWND] }  {
+  # the safe way to go back is to select-all, then go-back
+  set dstRetDescr "focus dst to return after $descr"
+  if { "" == [focus_window_and_send_cmd_keys  {{MENU}hsa}  \
+                                              $dstRetDescr $DST_HWND 0]   }  {
     return  -1;  # error already printed
   }
+  after 2000;  # 500 msec wasn't enough
+  twapi::send_keys {{BACKSPACE}} ;  # {%{LEFT}} didn't work
+  #TODO: appending "\.." to path works too!
+  # TODO: verify return through title - move to a new proc
+  #ok_pause_console;  # OK_TMP
   
   # focus the SOURCE and return to the parent directory on it
   if { 0 == [focus_window "focus src to return after $descr" $SRC_HWND 0] }  {
@@ -408,7 +417,8 @@ proc ::ok_winexp::focus_window {context targetHwnd {reportSuccess 0}}  {
 # If 'targetHwnd' given, first focuses this window
 # Returns handle of resulting window or "" on error.
 # TODO: The sequence of {press-Alt, release-Alt, press-Cmd-Key} is not universal
-proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd} {
+proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd \
+                                                  {reportSuccess 1}} {
   set descr "sending key-sequence {$keySeqStr} for '$descr'"
   set subSeqList [_split_key_seq_at_alt $keySeqStr]
   if { 1 == [focus_window "focus for $descr" $targetHwnd 0] }  {
@@ -419,15 +429,18 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd} {
     if { 0 == [llength $subSeqList] }   {
       twapi::send_keys $keySeqStr
      } else {
+      set beforeFirst 1;  # provide for delay between subsequences
       foreach subSeq $subSeqList  {
-set ::TMP_LAST__subSeq $subSeq   
+set ::TMP_LAST__subSeq $subSeq
+        if { !$beforeFirst }  { after 1000;  set beforeFirst 0 }
         twapi::send_keys {{MENU}}
         after 2000;  # wait A LOT after ALT
         twapi::send_keys $subSeq
       }
      }
     after 500; # avoid an access denied error
-    puts "-I- Success $descr";      return  [twapi::get_foreground_window]
+    if { $reportSuccess }  { puts "-I- Success $descr" }
+    return  [twapi::get_foreground_window]
   }
   puts "-E- Failed $descr";         return  ""
 }

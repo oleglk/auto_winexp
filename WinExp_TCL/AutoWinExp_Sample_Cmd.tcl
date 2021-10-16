@@ -91,7 +91,7 @@ proc ::ok_winexp::AutoWinExp_CmdSeq_CopySubFolder {inpRootPath inpLeafName}  {
   if { $rc == 0 }   { return  $rc }
   set rc [::ok_winexp::start_src {C:/Windows/explorer.exe} $inpRootPath "Windows-Explorer" [file tail $inpRootPath]]
   if { $rc == 0 }   { return  $rc }
-  after 5000
+  after 1000
 
   return  [::ok_winexp::copy_subfolder_from_src_to_dst $inpLeafName]
 }
