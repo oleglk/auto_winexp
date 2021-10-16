@@ -236,6 +236,35 @@ proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
 }
 
 
+# 
+proc ::ok_winexp::focus_window_and_paste {targetHwnd}  {
+  if { ("" == [set h [  \
+            focus_window_and_send_cmd_keys "{MENU}hv" \
+                                           "paste" $targetHwnd]]) }  {
+    return  "";  # error already printed
+  }
+  return  $h
+}
+
+
+#~ # Intended for OS directories, not Android!
+#~ proc ::ok_winexp::focus_src_window_and_change_folder {targetHwnd newDirPath}  {
+  #~ # TODO: check if all defined
+  #~ if { ![file isdirectory $newDirPath] }  {
+    #~ puts "-E- Aborting change-folder - inexistent input folder '$newDirPath'"
+    #~ return  ""
+  #~ }
+
+  #~ if { ("" == [set h [  \
+            #~ focus_window_and_send_cmd_keys "%d" \
+                              #~ "change folder path in window" $targetHwnd]]) }  {
+    #~ return  "";  # error already printed
+  #~ }
+  #~ send_input
+  #~ return  $h
+#~ }
+
+
 # Copies all the files from the current folder of source window
 # into the current folder of destination window.
 # Returns number of files copied on success, or -1 on error.
@@ -284,11 +313,12 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   variable DST_WND_TITLE
   # TODO: check if all defined
 
+  set descr "copy subfolder '$leafDirName'"
   # verify the subfolder existence on the source
-  set ultimateSrcDirPath [file join $SRC_DIR_PATH $leafDirName]
+  set ultimateSrcDirPath [file normalize [file join $SRC_DIR_PATH $leafDirName]]
   if { ![file isdirectory $srcUltimateDirPath] }  {
     puts "-E- Aborting - inexistent input directory '$ultimateSrcDirPath'"
-    return  0
+    return  -1
   }
   
   if { "" == [set dstDirPath [make_dst_subfolder $leafDirName]] }  {
@@ -296,27 +326,37 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
     return  -1
   }
   
-  # TODO: change to subfolder on the source
+  # focus the source and enter requested subfolder on it
+  if { 0 == [focus_window "focus for $descr" $SRC_HWND 0] }  {
+      return  -1;  # error already printed
+  }
+  set newDirPathNt [change_path_to_subfolder_in_current_window $leafDirName]
+  set newDirPath [file normalize $newDirPathNt]
+  set newLeafDirName [file tail $newDirPath]
+  if { ![string equal -nocase $newLeafDirName $leafDirName] }  {
+    puts "-E- Aborting - failed entering subfolder '$leafDirName' on the source; brought into '$newDirPath' instead"
+    return  -1
+  }
+  after 1000
+
+  # perform the actual copy
+  set copyRC [copy_all_from_src_to_dst]
   
-  return  [copy_all_from_src_to_dst]
+  # focus the source and return to the parent directory on it
+  if { 0 == [focus_window "focus to return after $descr" $SRC_HWND 0] }  {
+      return  -1;  # error already printed
+  }
+  set oldDirPathNorm [file normalize \
+                              [change_path_to_subfolder_in_current_window ".."]]
+  if { ![string equal  $oldDirPathNorm  [file normalize $SRC_DIR_PATH]] }  {
+    puts "-E- Aborting - failed returning to '$SRC_DIR_PATH' on the source; brought into '$oldDirPathNorm' instead"
+    return  -1
+  }
+
+  return  $copyRC
 }
 
 ################ Utility procedures ############################################
-
-proc ::ok_winexp::make_subfolder_in_window {targetHwnd newLeafDirName}  {
-  TODO
-}
-
-
-# Safe jump to 1st item: select-all, down, home
-proc ::ok_winexp::focus_window_and_paste {targetHwnd}  {
-  if { ("" == [set h [  \
-            focus_window_and_send_cmd_keys "{MENU}hv" \
-                                           "paste" $targetHwnd]]) }  {
-    return  "";  # error already printed
-  }
-  return  $h
-}
 
 # If 'targetHwnd' given, focuses it; otherwise focuses the latest SPM window
 proc ::ok_winexp::focus_window {context targetHwnd {reportSuccess 0}}  {
