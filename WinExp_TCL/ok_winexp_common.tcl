@@ -236,6 +236,9 @@ proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
 }
 
 
+# Copies all the files from the current folder of source window
+# into the current folder of destination window.
+# Returns number of files copied on success, or -1 on error.
 proc ::ok_winexp::copy_all_from_src_to_dst {}  {
   variable SRC_HWND
   variable DST_HWND
@@ -253,10 +256,10 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
     set descr "copy file #$i out of $nFiles from '$SRC_DIR_PATH'"
     puts "-D- Going to $descr"
     if { "" == [focus_window_and_copy_n $SRC_HWND $i] }  {
-      puts "-E- Aborting upon failure to $descr (at source)";       return  0
+      puts "-E- Aborting upon failure to $descr (at source)";       return  -1
     }
     if { "" == [focus_window_and_paste $DST_HWND] }  {
-      puts "-E- Aborting upon failure to $descr (at destination)";  return  0
+      puts "-E- Aborting upon failure to $descr (at destination)";  return  -1
     }
     #TODO: now there could be a popup - either progress or confirmation request
     ##### (on Android: error instead of confirmation request)
@@ -271,7 +274,39 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
 }
 
 
+# Copies all the files from the current folder of source window
+# into the current folder of destination window.
+# Returns number of files copied on success, or -1 on error.
+proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
+  variable SRC_HWND
+  variable DST_HWND
+  variable SRC_DIR_PATH
+  variable DST_WND_TITLE
+  # TODO: check if all defined
+
+  # verify the subfolder existence on the source
+  set ultimateSrcDirPath [file join $SRC_DIR_PATH $leafDirName]
+  if { ![file isdirectory $srcUltimateDirPath] }  {
+    puts "-E- Aborting - inexistent input directory '$ultimateSrcDirPath'"
+    return  0
+  }
+  
+  if { "" == [set dstDirPath [make_dst_subfolder $leafDirName]] }  {
+    puts "-E- Aborting upon failure to create destination subfolder '$leafDirName'"
+    return  -1
+  }
+  
+  # TODO: change to subfolder on the source
+  
+  return  [copy_all_from_src_to_dst]
+}
+
 ################ Utility procedures ############################################
+
+proc ::ok_winexp::make_subfolder_in_window {targetHwnd newLeafDirName}  {
+  TODO
+}
+
 
 # Safe jump to 1st item: select-all, down, home
 proc ::ok_winexp::focus_window_and_paste {targetHwnd}  {
