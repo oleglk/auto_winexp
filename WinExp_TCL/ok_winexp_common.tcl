@@ -326,6 +326,10 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
     return  -1
   }
   
+  # titles reflect original leaf directories to verify return after copy
+  # (not needed) set oldSrcTitle [twapi::get_window_text $SRC_HWND]
+  set oldDstTitle [twapi::get_window_text $DST_HWND]
+  
   if { "" == [set dstDirPath [make_dst_subfolder $leafDirName]] }  {
     puts "-E- Aborting upon failure to create destination subfolder '$leafDirName'"
     return  -1
@@ -361,7 +365,14 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   twapi::send_keys {{BACKSPACE}} ;  # {%{LEFT}} didn't work
   #TODO: appending "\.." to path works too!
   # TODO: verify return through title - move to a new proc
+  after 1000;  # without any delay it read subfolder subtitle
+  set newDstTitle [twapi::get_window_text $DST_HWND]
+  if { ![string equal -nocase $newDstTitle $oldDstTitle] }  {
+    puts "-E- Aborting - failed returning to subfolder '$oldDstTitle' on the destination; brought into '$newDstTitle' instead"
+    return  -1
+  }
   #ok_pause_console;  # OK_TMP
+  
   
   # focus the SOURCE and return to the parent directory on it
   if { 0 == [focus_window "focus src to return after $descr" $SRC_HWND 0] }  {
