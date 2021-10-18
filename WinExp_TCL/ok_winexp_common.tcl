@@ -153,12 +153,9 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
     }
   }
   # now enter the new directory
-  set newDirPathNt [change_path_to_subfolder_in_current_window $dstLeafDirName]
-  set newDirPath [file normalize $newDirPathNt]
-  set newLeafDirName [file tail $newDirPath]
-  if { ![string equal -nocase $newLeafDirName $dstLeafDirName] }  {
-    puts "-E- Failed attempt to $descr brought into '$newDirPath' instead"
-    return  ""
+  set newDirPath [change_path_to_subfolder_in_current_window $dstLeafDirName ""]
+  if { $newDirPath == "" }  {
+    return  "";   # error already printed
   }
   puts "-I- Success to $descr; new folder path is '$newDirPath'"
   return  $newDirPath
@@ -168,15 +165,16 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
 proc ::ok_winexp::read_native_folder_path_in_current_window {}  {
   # type Alt-d, then copy the path into clipboard
   twapi::send_keys {%d};  # focus path entry; dir-path should become selected
-  after 3000
+  after 1000; # 3000 did work
   twapi::send_keys {^c};  # filename-entry (should be selected) => clipboard
-  after 3000
+  after 1000; # 3000 did work
   set dirPath [::twapi::read_clipboard_text -raw FALSE]
   return  $dirPath
 }
 
 
-proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName}  {
+proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName \
+                                                      {expectedNewLeafName ""}}  {
   # type Alt-d, then append to the path
   twapi::send_keys {%d};  # focus path entry; dir-path should become selected
   after 3000
@@ -186,7 +184,17 @@ proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName}  {
   after 1000
   twapi::send_keys {{ENTER}}
   after 1000
-  return  [read_native_folder_path_in_current_window]
+  set newNativePath [read_native_folder_path_in_current_window]
+  set newDirPath [file normalize $newNativePath]
+  set newLeafDirName [file tail $newDirPath]
+  if { ($expectedNewLeafName == "") && ($folderLeafName != "..") }  {
+    set expectedNewLeafName $folderLeafName
+  }
+  if { ![string equal -nocase $newLeafDirName $expectedNewLeafName] }  {
+    puts "-E- Aborting - failed entering subfolder '$folderLeafName'; brought into '$newDirPath' instead"
+    return  ""
+  }
+  return  $newDirPath
 }
 
 
@@ -329,6 +337,7 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   # titles reflect original leaf directories to verify return after copy
   # (not needed) set oldSrcTitle [twapi::get_window_text $SRC_HWND]
   set oldDstTitle [twapi::get_window_text $DST_HWND]
+  #(not here) set oldDstPath  [read_native_folder_path_in_current_window]
   
   if { "" == [set dstDirPath [make_dst_subfolder $leafDirName]] }  {
     puts "-E- Aborting upon failure to create destination subfolder '$leafDirName'"
@@ -339,12 +348,11 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   if { 0 == [focus_window "focus for $descr" $SRC_HWND 0] }  {
       return  -1;  # error already printed
   }
-  set newDirPathNt [change_path_to_subfolder_in_current_window $leafDirName]
-  set newDirPath [file normalize $newDirPathNt]
-  set newLeafDirName [file tail $newDirPath]
-  if { ![string equal -nocase $newLeafDirName $leafDirName] }  {
-    puts "-E- Aborting - failed entering subfolder '$leafDirName' on the source; brought into '$newDirPath' instead"
-    return  -1
+  set oldSrcLeafName  [file tail [file normalize \
+                                  [read_native_folder_path_in_current_window]]]
+  set newDirPath [change_path_to_subfolder_in_current_window $leafDirName ""]
+  if { $newDirPath == "" }  {
+    return  -1;   # error already printed
   }
   after 1000
 
@@ -378,11 +386,9 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   if { 0 == [focus_window "focus src to return after $descr" $SRC_HWND 0] }  {
     return  -1;  # error already printed
   }
-  set oldDirPathNorm [file normalize \
-                              [change_path_to_subfolder_in_current_window ".."]]
-  if { ![string equal  $oldDirPathNorm  [file normalize $SRC_DIR_PATH]] }  {
-    puts "-E- Aborting - failed returning to '$SRC_DIR_PATH' on the source; brought into '$oldDirPathNorm' instead"
-    return  -1
+  set oldDirPathNorm [change_path_to_subfolder_in_current_window ".." $oldSrcLeafName]
+  if { $oldDirPathNorm == "" }  {
+    return  -1;   # error already printed
   }
 
   puts "-I- Done $descr from '$SRC_DIR_PATH' to '$DST_WND_TITLE'"
