@@ -343,6 +343,7 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
     puts "-E- Aborting upon failure to create destination subfolder '$leafDirName'"
     return  -1
   }
+  set oldDstLeafName  [file tail [file dirname [file normalize $dstDirPath]]]
   
   # focus the source and enter requested subfolder on it
   if { 0 == [focus_window "focus for $descr" $SRC_HWND 0] }  {
@@ -363,22 +364,29 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   
   after 1000
   # focus the DESTINATION and return to the parent directory on it
-  # the safe way to go back is to select-all, then go-back
-  set dstRetDescr "focus dst to return after $descr"
-  if { "" == [focus_window_and_send_cmd_keys  {{MENU}hsa}  \
-                                              $dstRetDescr $DST_HWND 0]   }  {
+  if { 0 == [focus_window "focus dst to return after $descr" $DST_HWND 0] }  {
     return  -1;  # error already printed
   }
-  after 2000;  # 500 msec wasn't enough
-  twapi::send_keys {{BACKSPACE}} ;  # {%{LEFT}} didn't work
-  #TODO: appending "\.." to path works too!
-  # TODO: verify return through title - move to a new proc
-  after 1000;  # without any delay it read subfolder subtitle
-  set newDstTitle [twapi::get_window_text $DST_HWND]
-  if { ![string equal -nocase $newDstTitle $oldDstTitle] }  {
-    puts "-E- Aborting - failed returning to subfolder '$oldDstTitle' on the destination; brought into '$newDstTitle' instead"
-    return  -1
+  set oldDirPathNorm [change_path_to_subfolder_in_current_window ".." $oldDstLeafName]
+  if { $oldDirPathNorm == "" }  {
+    return  -1;   # error already printed
   }
+  #~ # the safe way to go back is to select-all, then go-back
+  #~ set dstRetDescr "focus dst to return after $descr"
+  #~ if { "" == [focus_window_and_send_cmd_keys  {{MENU}hsa}  \
+                                              #~ $dstRetDescr $DST_HWND 0]   }  {
+    #~ return  -1;  # error already printed
+  #~ }
+  #~ after 2000;  # 500 msec wasn't enough
+  #~ twapi::send_keys {{BACKSPACE}} ;  # {%{LEFT}} didn't work
+  #~ #TODO: appending "\.." to path works too!
+  #~ # TODO: verify return through title - move to a new proc
+  #~ after 1000;  # without any delay it read subfolder subtitle
+  #~ set newDstTitle [twapi::get_window_text $DST_HWND]
+  #~ if { ![string equal -nocase $newDstTitle $oldDstTitle] }  {
+    #~ puts "-E- Aborting - failed returning to subfolder '$oldDstTitle' on the destination; brought into '$newDstTitle' instead"
+    #~ return  -1
+  #~ }
   #ok_pause_console;  # OK_TMP
   
   
