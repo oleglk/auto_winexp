@@ -167,7 +167,7 @@ proc ::ok_winexp::read_native_folder_path_in_current_window {}  {
   twapi::send_keys {%d};  # focus path entry; dir-path should become selected
   after 1000; # 3000 did work
   twapi::send_keys {^c};  # filename-entry (should be selected) => clipboard
-  after 1000; # 3000 did work
+  after 2000; # 3000 did work; 1000 caused "Access is denied" error
   set dirPath [::twapi::read_clipboard_text -raw FALSE]
   return  $dirPath
 }
@@ -177,13 +177,13 @@ proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName \
                                                       {expectedNewLeafName ""}}  {
   # type Alt-d, then append to the path
   twapi::send_keys {%d};  # focus path entry; dir-path should become selected
-  after 3000
+  after 1000; # 3000 did work
   twapi::send_keys {{END}};  # filename-entry should be selected => jump to end
-  after 1000
+  after 500; # 1000 did work
   twapi::send_input_text "\\$folderLeafName"
-  after 1000
+  after 500; # 1000 did work
   twapi::send_keys {{ENTER}}
-  after 1000
+  after 500; # 1000 did work
   set newNativePath [read_native_folder_path_in_current_window]
   set newDirPath [file normalize $newNativePath]
   set newLeafDirName [file tail $newDirPath]
@@ -305,7 +305,11 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
     ##### (on Android: error instead of confirmation request)
     #TODO: track focus moved to popup then back; do restrict max-wait-time
     # !!! no console print while tracking the popup !!!
-    after 2000;  # OK_TMP
+    #after 2000;  # OK_TMP
+    if { ![check_for_windows_inexistent 2000 \
+                      [list "Replace or Skip Files"]] }  {
+      puts "-E- Aborting upon appearance of undesired popup";  return  -1
+    }
     #ok_pause_console "-- CR to continue --"
     puts "-D- Finished to $descr"
   }
@@ -452,6 +456,22 @@ set ::TMP_LAST__subSeq $subSeq
     return  [twapi::get_foreground_window]
   }
   puts "-E- Failed $descr";         return  ""
+}
+
+
+# Returns 1 if no windoow title appears
+proc ::ok_winexp::check_for_windows_inexistent {waitSec titlesList} {
+  set nAttempts [expr $waitSec / 0.5];  # check twice in a second
+  for {set i 0} {$i < $nAttempts} {incr i}   {
+    foreach titleStr $titlesList  {
+      set wnds [twapi::find_windows -text "$titleStr" \
+                                        -toplevel 1 -visible 1]
+      puts "-E- Found [llength $wnds] undesired window(s) with title $titleStr"
+      return  0
+    }
+    after 500
+  }
+  return  1
 }
 
 
