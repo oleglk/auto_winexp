@@ -43,7 +43,7 @@ proc ::ok_winexp::AutoWinExp_CmdSeq_Copy1st {inpPath}  {
   set rc [::ok_winexp::locate_dst "Windows-Explorer" {OUT1}]
   if { $rc == 0 }   { return  $rc }
 
-  set rc [::ok_winexp::focus_window_and_copy_first $::ok_winexp::SRC_HWND]
+  set rc [::ok_winexp::focus_window_and_copy_n $::ok_winexp::SRC_HWND 1]
   if { $rc == 0 }   { return  $rc }
   set rc [::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND]
   return  $rc

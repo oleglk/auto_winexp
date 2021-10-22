@@ -165,7 +165,7 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
 proc ::ok_winexp::read_native_folder_path_in_current_window {}  {
   # type Alt-d, then copy the path into clipboard
   twapi::send_keys {%d};  # focus path entry; dir-path should become selected
-  after 1000; # 3000 did work
+  after 2000; # 3000 did work; 1000 caused "The parameter is incorrect" error
   twapi::send_keys {^c};  # filename-entry (should be selected) => clipboard
   after 2000; # 3000 did work; 1000 caused "Access is denied" error
   set dirPath [::twapi::read_clipboard_text -raw FALSE]
@@ -289,7 +289,7 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
     if { "" == [focus_window_and_copy_n $SRC_HWND $i] }  {
       puts "-E- Aborting upon failure to $descr (at source)";       return  -1
     }
-    after 2000
+    after 500;  # 2000 did work
     if { "" == [focus_window_and_paste $DST_HWND] }  {
       puts "-E- Aborting upon failure to $descr (at destination)";  return  -1
     }
