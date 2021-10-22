@@ -313,6 +313,10 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
             "Replace or Skip Files"]] }     {
       puts "-E- Aborting upon appearance of undesired popup";  return  -1
     }
+    if { ![wait_for_windows_inexistent 10 [list \
+            "Copying "]] }     {
+      puts "-E- Aborting since progress-indicator windows got stuck";  return  -1
+    }
     #ok_pause_console "-- CR to continue --"
     puts "-D- Finished to $descr"
   }
@@ -480,6 +484,33 @@ proc ::ok_winexp::check_for_windows_inexistent {waitSec titlesList} {
   }
   puts "-I- End checking for undesired popup windows"
   return  1
+}
+
+
+# Returns 1 if no listed windoow title present,
+# or it disappears after 'waitSec' seconds
+proc ::ok_winexp::wait_for_windows_inexistent {waitSec titlesList} {
+  set nAttempts [expr $waitSec / 0.5];  # check twice in a second
+  puts "-I- Begin waiting for popup windows inexistance (up to $waitSec sec)..."
+  for {set i 0} {$i < $nAttempts} {incr i}   {
+    after 500
+    set cnt 0
+    foreach titleStr $titlesList  {
+      set wnds [twapi::find_windows -text "$titleStr" \
+                                        -toplevel 1 -visible 1]
+      set numWnds [llength $wnds]
+      incr cnt $numWnds
+      if { $numWnds > 0 }  {
+        puts "-D- Found $numWnds window(s) with title '$titleStr'"
+      }
+    }
+    if { $cnt == 0 }  { ;  # done waiting - all good
+      puts "-I- End waiting for popup windows inexistance (after [expr $i/2.0] sec)"
+      return  1
+    }
+  }
+  puts "-E- Failed waiting for popup windows inexistance - $cnt popup(s) present after [expr $nAttempts/2.0] sec"
+  return  0
 }
 
 
