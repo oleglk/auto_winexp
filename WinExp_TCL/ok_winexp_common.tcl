@@ -219,24 +219,10 @@ proc ::ok_winexp::focus_window_and_jump_to_top {targetHwnd}  {
 }
 
 
-# Safe jump to 1st item: select-all, down, home
-proc ::ok_winexp::focus_window_and_copy_first {targetHwnd}  {
-  # TODO: ensure "view-details mode"
-  if { ("" == [set h [  \
-            focus_window_and_send_cmd_keys "{MENU}hsa{DOWN}{HOME}{MENU}hco" \
-                                           "copy first file" $targetHwnd]]) }  {
-    return  "";  # error already printed
-  }
-  return  $h
-}
-
-
-# Safe jump to 1st item: select-all, down-n-times, home
+# Copies file #n ito clipboard
+# (Safe jump to 1st item: select-all, down-n-times, home)
 proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
   # TODO: ensure "view-details mode"
-  if { $n == 1 }  {
-    return  [focus_window_and_copy_first $targetHwnd]
-  }
   set nm1 [expr $n-1]
   set keySeq "{MENU}hsa{DOWN}{HOME}[string repeat {{DOWN}} $nm1]{MENU}hco"
   if { ("" == [set h [  \
@@ -244,6 +230,9 @@ proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
                                            "copy file #$n" $targetHwnd]]) }  {
     return  "";  # error already printed
   }
+  # if "ribbon" not hidden in time, it covers 1st file; "copy" fails then
+  twapi::send_keys {{ESC}{ESC}^c};  # 2nd "copy" command - improves reliability
+  ##ok_pause_console "-- CR to continue --";  # OK_TMP
   return  $h
 }
 
@@ -649,7 +638,7 @@ proc ::ok_winexp::find_descendent_by_title {hwnd txtPattern}  {
 # source c:/Oleg/Work/DualCam/Auto/auto_winexp/winexp_tcl/ok_winexp_common.tcl
 # ::ok_winexp::start_src {C:/Windows/explorer.exe} {g:\tmp\WinExp\INP1} "Windows-Explorer" {INP1}
 # ::ok_winexp::locate_dst "Windows-Explorer" {OUT1}
-# ::ok_winexp::focus_window_and_copy_first $::ok_winexp::SRC_HWND
+# ::ok_winexp::focus_window_and_copy_n $::ok_winexp::SRC_HWND 1
 # ::ok_winexp::focus_window_and_paste $::ok_winexp::DST_HWND
 #### ::ok_winexp::focus_window_and_copy_next $::ok_winexp::SRC_HWND
 # ::ok_winexp::focus_window_and_copy_n $::ok_winexp::SRC_HWND 2
