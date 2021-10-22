@@ -221,6 +221,7 @@ proc ::ok_winexp::focus_window_and_jump_to_top {targetHwnd}  {
 
 # Safe jump to 1st item: select-all, down, home
 proc ::ok_winexp::focus_window_and_copy_first {targetHwnd}  {
+  # TODO: ensure "view-details mode"
   if { ("" == [set h [  \
             focus_window_and_send_cmd_keys "{MENU}hsa{DOWN}{HOME}{MENU}hco" \
                                            "copy first file" $targetHwnd]]) }  {
@@ -232,6 +233,7 @@ proc ::ok_winexp::focus_window_and_copy_first {targetHwnd}  {
 
 # Safe jump to 1st item: select-all, down-n-times, home
 proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
+  # TODO: ensure "view-details mode"
   if { $n == 1 }  {
     return  [focus_window_and_copy_first $targetHwnd]
   }
@@ -281,18 +283,19 @@ proc ::ok_winexp::focus_window_and_paste {targetHwnd}  {
 proc ::ok_winexp::copy_all_from_src_to_dst {}  {
   variable SRC_HWND
   variable DST_HWND
-  variable SRC_DIR_PATH
   variable DST_WND_TITLE
   # TODO: check if all defined
-  set srcFiles [glob -nocomplain -directory $SRC_DIR_PATH {*}]
+  set srcWinDirPathNt [read_native_folder_path_in_current_window]
+  set srcWinDirPath [file normalize $srcWinDirPathNt]
+  set srcFiles [glob -nocomplain -directory $srcWinDirPath {*}]
   set nFiles [llength $srcFiles]
   if { $nFiles == 0 }  {
-    puts "-W- No files to copy from '$SRC_DIR_PATH'";   return 0
+    puts "-W- No files to copy from '$srcWinDirPath'";   return 0
   }
   
-  puts "-I- Begin copying $nFiles file(s) from '$SRC_DIR_PATH' to '$DST_WND_TITLE'"
+  puts "-I- Begin copying $nFiles file(s) from '$srcWinDirPath' to '$DST_WND_TITLE'"
   for {set i 1}  {$i <= $nFiles}  {incr i 1}  {
-    set descr "copy file #$i out of $nFiles from '$SRC_DIR_PATH'"
+    set descr "copy file #$i out of $nFiles from '$srcWinDirPath'"
     puts "-D- Going to $descr"
     if { "" == [focus_window_and_copy_n $SRC_HWND $i] }  {
       puts "-E- Aborting upon failure to $descr (at source)";       return  -1
@@ -306,14 +309,14 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
     #TODO: track focus moved to popup then back; do restrict max-wait-time
     # !!! no console print while tracking the popup !!!
     #after 2000;  # OK_TMP
-    if { ![check_for_windows_inexistent 2000 \
-                      [list "Replace or Skip Files"]] }  {
+    if { ![check_for_windows_inexistent 2 [list \
+            "Replace or Skip Files"]] }     {
       puts "-E- Aborting upon appearance of undesired popup";  return  -1
     }
     #ok_pause_console "-- CR to continue --"
     puts "-D- Finished to $descr"
   }
-  puts "-I- Done copying $nFiles file(s) from '$SRC_DIR_PATH' to '$DST_WND_TITLE'"
+  puts "-I- Done copying $nFiles file(s) from '$srcWinDirPath' to '$DST_WND_TITLE'"
   return  $nFiles
 }
 
@@ -350,7 +353,8 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   set oldDstLeafName  [file tail [file dirname [file normalize $dstDirPath]]]
   
   # focus the source and enter requested subfolder on it
-  if { 0 == [focus_window "focus for $descr" $SRC_HWND 0] }  {
+  set sfDescr "enter source subfolder '$leafDirName'"
+  if { 0 == [focus_window "focus for $sfDescr" $SRC_HWND 0] }  {
       return  -1;  # error already printed
   }
   set oldSrcLeafName  [file tail [file normalize \
@@ -362,7 +366,7 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   after 1000
 
   # perform the actual copy
-  if { "" == [set copyRC [copy_all_from_src_to_dst]] }  {
+  if { -1 == [set copyRC [copy_all_from_src_to_dst]] }  {
     return  -1;  # error already printed
   }
   
@@ -462,15 +466,19 @@ set ::TMP_LAST__subSeq $subSeq
 # Returns 1 if no windoow title appears
 proc ::ok_winexp::check_for_windows_inexistent {waitSec titlesList} {
   set nAttempts [expr $waitSec / 0.5];  # check twice in a second
+  puts "-I- Begin checking for undesired popup windows ($waitSec sec)..."
   for {set i 0} {$i < $nAttempts} {incr i}   {
     foreach titleStr $titlesList  {
       set wnds [twapi::find_windows -text "$titleStr" \
                                         -toplevel 1 -visible 1]
-      puts "-E- Found [llength $wnds] undesired window(s) with title $titleStr"
-      return  0
+      if { [llength $wnds] > 0 }  {
+        puts "-E- Found [llength $wnds] undesired window(s) with title '$titleStr'"
+        return  0
+      }
     }
     after 500
   }
+  puts "-I- End checking for undesired popup windows"
   return  1
 }
 
