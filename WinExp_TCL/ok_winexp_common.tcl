@@ -79,26 +79,65 @@ proc ::ok_winexp::start_src {exePath srcDirPath appName srcWndTitle}  {
 }
 
 
-# Locates (WinExplorer) window with title 'dstWndTitle'.
+# Locates (WinExplorer) window with title 'wndTitle' and stores it as source
+# Example:  ::ok_winexp::locate_src "Windows-Explorer" {TMP}
+proc ::ok_winexp::locate_src {appName wndTitle}  {
+  variable SRC_HWND
+  variable SRC_WND_TITLE
+  variable SRC_DIR_PATH
+  
+  set hwnd [locate_wnd_by_title $appName $wndTitle "source"]
+  if { $hwnd == 0 }  {
+    return  0;  # error already printed
+  }
+  set SRC_HWND      $hwnd
+  set SRC_WND_TITLE $wndTitle
+  
+  if { 0 == [focus_window "focus source window to read source path" \
+                                                          $SRC_HWND] }  {
+      return  0;  # error already printed
+  }
+  set srcDirPathNt [read_native_folder_path_in_current_window]
+  puts "-D- Native folder path in window '$wndTitle' is: '$srcDirPathNt'"
+  set SRC_DIR_PATH [file normalize $srcDirPathNt]
+  
+  return  $SRC_HWND
+}
+
+
+# Locates (WinExplorer) window with title 'wndTitle' and stores it as destination
 # Example:  ::ok_winexp::locate_dst "Windows-Explorer" {TMP}
-proc ::ok_winexp::locate_dst {appName dstWndTitle}  {
+proc ::ok_winexp::locate_dst {appName wndTitle}  {
   variable DST_HWND
   variable DST_WND_TITLE
+  
+  set hwnd [locate_wnd_by_title $appName $wndTitle "destination"]
+  if { $hwnd == 0 }  {
+    return  0;  # error already printed
+  }
+  set DST_HWND      $hwnd
+  set DST_WND_TITLE $wndTitle
+  return  $DST_HWND
+}
 
-  set DST_WND_TITLE $dstWndTitle
-  set wndDescr "locating window of $appName with title '$DST_WND_TITLE'"
+
+# Locates (WinExplorer) window with title 'wndTitle'.
+# Example:  ::ok_winexp::locate_wnd_by_title "Windows-Explorer" {TMP}
+proc ::ok_winexp::locate_wnd_by_title {appName wndTitle descr}  {
+  set wndDescr "locating window of $appName with title '$wndTitle' - $descr"
+  set hwnd 0
   
   for {set attemptsLeft 20} {$attemptsLeft > 0} {incr attemptsLeft -1}  {
     after 500
-    set wnds [twapi::find_windows -text "$DST_WND_TITLE" -match string \
+    set wnds [twapi::find_windows -text "$wndTitle" -match string \
                                       -toplevel 1 -visible 1]
     if { [llength $wnds] == 1 }  {
-      set DST_HWND [lindex $wnds 0]
+      set hwnd [lindex $wnds 0]
       puts "-I- Success $wndDescr"
-      return  $DST_HWND
+      return  $hwnd
     }
   }
-  puts "-E- Failed $wndDescr ([llength $wnds] candidate(s))"
+  puts "-E- Failed $wndDescr: ([llength $wnds] candidate(s))"
   return  0
 }
 

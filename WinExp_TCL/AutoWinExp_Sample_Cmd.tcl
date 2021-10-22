@@ -77,7 +77,9 @@ proc ::ok_winexp::AutoWinExp_CmdSeq_Copy3rd {inpPath}  {
 
 
 proc ::ok_winexp::AutoWinExp_CmdSeq_CopyAll {inpPath}  {
-  set rc [::ok_winexp::start_src {C:/Windows/explorer.exe} $inpPath "Windows-Explorer" [file tail $inpPath]]
+##  set rc [::ok_winexp::start_src {C:/Windows/explorer.exe} $inpPath "Windows-Explorer" [file tail $inpPath]]
+  # assume Windows-Explorer window title equals its leaf direcory
+  set rc [::ok_winexp::locate_src "Windows-Explorer" [file tail $inpPath]]
   if { $rc == 0 }   { return  $rc }
   set rc [::ok_winexp::locate_dst "Windows-Explorer" {OUT1}]
   if { $rc == 0 }   { return  $rc }
@@ -89,7 +91,9 @@ proc ::ok_winexp::AutoWinExp_CmdSeq_CopyAll {inpPath}  {
 proc ::ok_winexp::AutoWinExp_CmdSeq_CopySubFolder {inpRootPath inpLeafName}  {
   set rc [::ok_winexp::locate_dst "Windows-Explorer" {OUT0}]
   if { $rc == 0 }   { return  $rc }
-  set rc [::ok_winexp::start_src {C:/Windows/explorer.exe} $inpRootPath "Windows-Explorer" [file tail $inpRootPath]]
+##  set rc [::ok_winexp::start_src {C:/Windows/explorer.exe} $inpRootPath "Windows-Explorer" [file tail $inpRootPath]]
+  # assume Windows-Explorer window title equals its leaf direcory
+  set rc [::ok_winexp::locate_src "Windows-Explorer" [file tail $inpRootPath]]
   if { $rc == 0 }   { return  $rc }
   after 1000
 
