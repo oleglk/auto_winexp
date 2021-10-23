@@ -156,8 +156,11 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
   puts "-I- Begin to $descr on destination"
   
   # deselect subfolder(s) then create new one
+  ##? <ESC> then reenter renaming to prevent loosing leading char-s in folder name
+  ##? "{MENU}hsn{MENU}hn{ESC}{MENU}hr" 
   if { ("" == [set h [  \
-            focus_window_and_send_cmd_keys "{MENU}hsn{MENU}hn" $descr $DST_HWND]]) }  {
+          focus_window_and_send_cmd_keys "{MENU}hsn{MENU}hn" \
+          $descr $DST_HWND]]) }  {
     return  "";  # error already printed
   }
   #~ if { 0 == [focus_window "focus for $descr" $DST_HWND] }  {
@@ -175,9 +178,11 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
   #~ after 1000;   twapi::send_keys {h}
   #~ after 4000;   twapi::send_keys {n}  
   
-  after 1000;  # without delay once saw 2 leading characters lost
+  #~ # delay-then-clean to fight cases of loosing leading char-s in folder name
+  #~ after 1000;   twapi::send_keys {{DELETE}}
+  after 2000;  # without delay saw leading character(s) lost;  1000 not enough
   twapi::send_input_text $dstLeafDirName
-  after 300;  # 1000 did work
+  after 300;  # 1000 did work; 300 didn't work?
   twapi::send_keys {{ENTER}}
   # check for popup upon name conflict - on Android unsupported
   after 1500;  # 3000 did work. Assume no conflict in actual use, thus small delay
@@ -267,14 +272,34 @@ proc ::ok_winexp::focus_window_and_jump_to_top {targetHwnd}  {
 # requires "view-details mode"
 proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
   set nm1 [expr $n-1]
-  set keySeq "{MENU}hsa{DOWN}{HOME}[string repeat {{DOWN}} $nm1]{MENU}hco"
+# set keySeq "{MENU}hsa{ESC}{ESC}{DOWN}{HOME}[string repeat {{DOWN}} $nm1]{MENU}hco"
+  set keySeq "{MENU}hsa"
   if { ("" == [set h [  \
             focus_window_and_send_cmd_keys $keySeq \
-                                           "copy file #$n" $targetHwnd]]) }  {
+                                           "copy file #$n" $targetHwnd 0]]) }  {
     return  "";  # error already printed
   }
+  
+  # OK_TMP:
+  after 1000; # !!! 5000 did work; 1000 did work; 0 causes failure !!!
+  if { ("" == [set h [  \
+            _TMP_send_cmd_keys_in_current_window "{DOWN}{HOME}" \
+                                           "copy file #$n" $targetHwnd 0]]) }  {
+    return  "";  # error already printed
+  }
+
+  after 5000
+  twapi::send_keys "[string repeat {{DOWN}} $nm1]{MENU}hco"
+  if { ("" == [set h [  \
+            _TMP_send_cmd_keys_in_current_window \
+                                  "[string repeat {{DOWN}} $nm1]{MENU}hco" \
+                                  "copy file #$n" $targetHwnd 0]]) }  {
+    return  "";  # error already printed
+  }
+  
   # if "ribbon" not hidden in time, it covers 1st file; "copy" fails then
   twapi::send_keys {{ESC}{ESC}^c};  # 2nd "copy" command - improves reliability
+  error "OK_ABORT"
   ##ok_pause_console "-- CR to continue --";  # OK_TMP
   return  $h
 }
@@ -432,16 +457,18 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
 
 
 # Copies all the immediate subfolders from the current folder of source window
+# whose names match 'leafDirPattern'
 # into the current folder of destination window.
 # Returns number of files copied on success, or -1 on error.
-proc ::ok_winexp::copy_all_subfolders_from_src_to_dst {leafDirName}  {
+proc ::ok_winexp::copy_all_subfolders_from_src_to_dst {{leafDirPattern "*"}}   {
   variable SRC_HWND
   variable DST_HWND
   variable SRC_DIR_PATH
   variable DST_WND_TITLE
   # TODO: check if all defined
   
-  set subDirNames [glob -nocomplain -tails -directory $SRC_DIR_PATH -types d {*}]
+  set subDirNames [glob -nocomplain -tails -directory $SRC_DIR_PATH -types d  \
+                                                                $leafDirPattern]
   set numSubDirs [llength $subDirNames]
   if { $numSubDirs == 0 }  {
     puts "-W- No subfolders to copy from under '$SRC_DIR_PATH$'"
@@ -454,13 +481,13 @@ proc ::ok_winexp::copy_all_subfolders_from_src_to_dst {leafDirName}  {
   foreach leafDirName $subDirNames {
     incr cntDirs 1
     set dirDescr "subfolder #$cntDirs out of $numSubDirs"
-    puts "-I-   { Begin $dirDescr into '$DST_WND_TITLE'"
+    puts "-I-   { Begin copying $dirDescr into '$DST_WND_TITLE'"
     set cntInOne [copy_subfolder_from_src_to_dst $leafDirName]
     if { $cntInOne < 0 }  {
-      puts "-E- Aborting at $dirDescr"
+      puts "-E- Aborting copying at $dirDescr"
       return  -1
     }
-    puts "-I-   } End   $dirDescr into '$DST_WND_TITLE' - $cntInOne file(s) copied"
+    puts "-I-   } End   copying $dirDescr into '$DST_WND_TITLE' - $cntInOne file(s) copied"
     incr cntFiles $cntInOne
   }
   puts "-I- End   $descr into '$DST_WND_TITLE'- $cntDirs folder(s) ($cntFiles file(s)) copied"
@@ -512,7 +539,7 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd \
   if { 1 == [focus_window "focus for $descr" $targetHwnd 0] }  {
     set wndBefore [expr {($targetHwnd == 0)? [twapi::get_foreground_window] : \
                                         $targetHwnd}];   # to detect focus loss
-    after 300;  # 1000 did work
+    after 1000;  # 300 didn't work?
     if { [complain_if_focus_moved $wndBefore $descr 1] }  { return  "" }
     if { 0 == [llength $subSeqList] }   {
       twapi::send_keys $keySeqStr
@@ -520,9 +547,9 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd \
       set beforeFirst 1;  # provide for delay between subsequences
       foreach subSeq $subSeqList  {
 set ::TMP_LAST__subSeq $subSeq
-        if { !$beforeFirst }  { after 500;  set beforeFirst 0 }; # 1000 did work
+        if { !$beforeFirst }  { after 1000;  set beforeFirst 0 }; # 500 didn't work?
         twapi::send_keys {{MENU}}
-        after 1500;  # wait A LOT after ALT;  2000 did work
+        after 2000;  # wait A LOT after ALT;  2000 did work; 1500 didn't work?
         twapi::send_keys $subSeq
       }
      }
@@ -531,6 +558,36 @@ set ::TMP_LAST__subSeq $subSeq
     return  [twapi::get_foreground_window]
   }
   puts "-E- Failed $descr";         return  ""
+}
+
+
+# Sends given keys while taking care of occurences of {MENU}.
+# If 'targetHwnd' given, first focuses this window
+# Returns handle of resulting window or "" on error.
+# TODO: The sequence of {press-Alt, release-Alt, press-Cmd-Key} is not universal
+proc ::ok_winexp::_TMP_send_cmd_keys_in_current_window {keySeqStr descr targetHwnd \
+                                                  {reportSuccess 1}} {
+  set descr "sending key-sequence {$keySeqStr} for '$descr'"
+  set subSeqList [_split_key_seq_at_alt $keySeqStr]
+  set wndBefore [expr {($targetHwnd == 0)? [twapi::get_foreground_window] : \
+                                      $targetHwnd}];   # to detect focus loss
+  after 1000;  # 300 didn't work?
+  if { [complain_if_focus_moved $wndBefore $descr 1] }  { return  "" }
+  if { 0 == [llength $subSeqList] }   {
+    twapi::send_keys $keySeqStr
+   } else {
+    set beforeFirst 1;  # provide for delay between subsequences
+    foreach subSeq $subSeqList  {
+set ::TMP_LAST__subSeq $subSeq
+      if { !$beforeFirst }  { after 1000;  set beforeFirst 0 }; # 500 didn't work?
+      twapi::send_keys {{MENU}}
+      after 2000;  # wait A LOT after ALT;  2000 did work; 1500 didn't work?
+      twapi::send_keys $subSeq
+    }
+   }
+  after 500; # avoid an access denied error
+  if { $reportSuccess }  { puts "-I- Success $descr" }
+  return  [twapi::get_foreground_window]
 }
 
 

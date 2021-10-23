@@ -99,3 +99,17 @@ proc ::ok_winexp::AutoWinExp_CmdSeq_CopySubFolder {inpRootPath inpLeafName}  {
 
   return  [::ok_winexp::copy_subfolder_from_src_to_dst $inpLeafName]
 }
+
+
+proc ::ok_winexp::AutoWinExp_CmdSeq_CopyAllSubFolders { \
+                                    inpRootPath inpLeafPattern outRootLeaf}  {
+  set rc [::ok_winexp::locate_dst "Windows-Explorer" $outRootLeaf]
+  if { $rc == 0 }   { return  $rc }
+
+  # assume Windows-Explorer window title equals its leaf direcory
+  set rc [::ok_winexp::locate_src "Windows-Explorer" [file tail $inpRootPath]]
+  if { $rc == 0 }   { return  $rc }
+  after 1000
+
+  return  [::ok_winexp::copy_all_subfolders_from_src_to_dst $inpLeafPattern]
+}
