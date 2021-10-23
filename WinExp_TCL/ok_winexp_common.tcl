@@ -177,10 +177,10 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
   
   after 1000;  # without delay once saw 2 leading characters lost
   twapi::send_input_text $dstLeafDirName
-  after 1000;  # 
+  after 300;  # 1000 did work
   twapi::send_keys {{ENTER}}
   # check for popup upon name conflict - on Android unsupported
-  after 3000
+  after 1500;  # 3000 did work. Assume no conflict in actual use, thus small delay
   set currWnd [twapi::get_foreground_window]
   if { $currWnd != $DST_HWND }  {
     if { $currWnd == "" }   {
@@ -208,9 +208,9 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
 proc ::ok_winexp::read_native_folder_path_in_current_window {}  {
   # type Alt-d, then copy the path into clipboard
   twapi::send_keys {%d};  # focus path entry; dir-path should become selected
-  after 2000; # 3000 did work; 1000 caused "The parameter is incorrect" error
+  after 2500; # 3000 did work; 1000 caused "The parameter is incorrect" error
   twapi::send_keys {^c};  # filename-entry (should be selected) => clipboard
-  after 2000; # 3000 did work; 1000 caused "Access is denied" error
+  after 200; # 3000 did work; 1000 caused "Access is denied" error
   set dirPath [::twapi::read_clipboard_text -raw FALSE]
   return  $dirPath
 }
@@ -264,8 +264,8 @@ proc ::ok_winexp::focus_window_and_jump_to_top {targetHwnd}  {
 
 # Copies file #n ito clipboard
 # (Safe jump to 1st item: select-all, down-n-times, home)
+# requires "view-details mode"
 proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
-  # TODO: ensure "view-details mode"
   set nm1 [expr $n-1]
   set keySeq "{MENU}hsa{DOWN}{HOME}[string repeat {{DOWN}} $nm1]{MENU}hco"
   if { ("" == [set h [  \
@@ -477,7 +477,7 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd \
   if { 1 == [focus_window "focus for $descr" $targetHwnd 0] }  {
     set wndBefore [expr {($targetHwnd == 0)? [twapi::get_foreground_window] : \
                                         $targetHwnd}];   # to detect focus loss
-    after 1000
+    after 300;  # 1000 did work
     if { [complain_if_focus_moved $wndBefore $descr 1] }  { return  "" }
     if { 0 == [llength $subSeqList] }   {
       twapi::send_keys $keySeqStr
@@ -485,7 +485,7 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd \
       set beforeFirst 1;  # provide for delay between subsequences
       foreach subSeq $subSeqList  {
 set ::TMP_LAST__subSeq $subSeq
-        if { !$beforeFirst }  { after 1000;  set beforeFirst 0 }
+        if { !$beforeFirst }  { after 500;  set beforeFirst 0 }; # 1000 did work
         twapi::send_keys {{MENU}}
         after 2000;  # wait A LOT after ALT
         twapi::send_keys $subSeq
