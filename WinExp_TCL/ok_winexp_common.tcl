@@ -31,6 +31,10 @@ namespace eval ::ok_winexp:: {
 
 namespace import ::ok_utils::*;
 
+################################################################################
+puts "=== Please configure Windows Folder Defaults to view-details and sort-by-name-ascending ==="
+################################################################################
+
 
 # Starts WinExplorer  ('exePath') in directory 'srcDirPath'.
 # Example:  ::ok_winexp::start_src {C:/Windows/explorer.exe} {d:\tmp} "Windows-Explorer" {TMP}
