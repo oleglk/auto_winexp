@@ -319,7 +319,7 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
   # TODO: check if all defined
   set srcWinDirPathNt [read_native_folder_path_in_current_window]
   set srcWinDirPath [file normalize $srcWinDirPathNt]
-  set srcFiles [glob -nocomplain -directory $srcWinDirPath {*}]
+  set srcFiles [glob -nocomplain -directory $srcWinDirPath -types f {*}]
   set nFiles [llength $srcFiles]
   if { $nFiles == 0 }  {
     puts "-W- No files to copy from '$srcWinDirPath'";   return 0
@@ -430,6 +430,42 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   return  $copyRC
 }
 
+
+# Copies all the immediate subfolders from the current folder of source window
+# into the current folder of destination window.
+# Returns number of files copied on success, or -1 on error.
+proc ::ok_winexp::copy_all_subfolders_from_src_to_dst {leafDirName}  {
+  variable SRC_HWND
+  variable DST_HWND
+  variable SRC_DIR_PATH
+  variable DST_WND_TITLE
+  # TODO: check if all defined
+  
+  set subDirNames [glob -nocomplain -tails -directory $SRC_DIR_PATH -types d {*}]
+  set numSubDirs [llength $subDirNames]
+  if { $numSubDirs == 0 }  {
+    puts "-W- No subfolders to copy from under '$SRC_DIR_PATH$'"
+    return  0
+  }
+  
+  set descr "copy $numSubDirs subfolder(s) of '$SRC_DIR_PATH'"
+  puts "-I- Begin $descr into '$DST_WND_TITLE'"
+  set cntFiles 0;   set cntDirs 0
+  foreach leafDirName $subDirNames {
+    incr cntDirs 1
+    set dirDescr "subfolder #$cntDirs out of $numSubDirs"
+    puts "-I-   { Begin $dirDescr into '$DST_WND_TITLE'"
+    set cntInOne [copy_subfolder_from_src_to_dst $leafDirName]
+    if { $cntInOne < 0 }  {
+      puts "-E- Aborting at $dirDescr"
+      return  -1
+    }
+    puts "-I-   } End   $dirDescr into '$DST_WND_TITLE' - $cntInOne file(s) copied"
+    incr cntFiles $cntInOne
+  }
+  puts "-I- End   $descr into '$DST_WND_TITLE'- $cntDirs folder(s) ($cntFiles file(s)) copied"
+  return  $cntFiles
+}
 ################ Utility procedures ############################################
 
 # If 'targetHwnd' given, focuses it; otherwise focuses the latest SPM window
