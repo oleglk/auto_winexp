@@ -399,14 +399,13 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   if { $newDirPath == "" }  {
     return  -1;   # error already printed
   }
-  after 1000
-
+  after 300;  # 1000 did work
   # perform the actual copy
   if { -1 == [set copyRC [copy_all_from_src_to_dst]] }  {
     return  -1;  # error already printed
   }
   
-  after 1000
+  after 300;  # 1000 did work
   # focus the DESTINATION and return to the parent directory on it
   if { 0 == [focus_window "focus dst to return after $descr" $DST_HWND 0] }  {
     return  -1;  # error already printed
@@ -487,7 +486,7 @@ proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd \
 set ::TMP_LAST__subSeq $subSeq
         if { !$beforeFirst }  { after 500;  set beforeFirst 0 }; # 1000 did work
         twapi::send_keys {{MENU}}
-        after 2000;  # wait A LOT after ALT
+        after 1500;  # wait A LOT after ALT;  2000 did work
         twapi::send_keys $subSeq
       }
      }
