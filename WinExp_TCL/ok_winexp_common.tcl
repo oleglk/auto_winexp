@@ -288,17 +288,25 @@ proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
     return  "";  # error already printed
   }
 
-  after 5000
+  after 1000
   if { ("" == [set h [  \
             _TMP_send_cmd_keys_in_current_window \
-                                  "[string repeat {{DOWN}} $nm1]{MENU}hco" \
+                                  "[string repeat {{DOWN}} $nm1]" \
                                   "copy file #$n" $targetHwnd 0]]) }  {
     return  "";  # error already printed
   }
-  
+
+  after 5000
+  if { ("" == [set h [  \
+            _TMP_send_cmd_keys_in_current_window \
+                                  "{MENU}hco" \
+                                  "copy file #$n" $targetHwnd 0]]) }  {
+    return  "";  # error already printed
+  }
+    
   # if "ribbon" not hidden in time, it covers 1st file; "copy" fails then
   twapi::send_keys {{ESC}{ESC}^c};  # 2nd "copy" command - improves reliability
-  error "OK_ABORT"
+  #error "OK_ABORT"
   ##ok_pause_console "-- CR to continue --";  # OK_TMP
   return  $h
 }
