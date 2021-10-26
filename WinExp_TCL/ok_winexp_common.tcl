@@ -289,7 +289,6 @@ proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
   }
 
   after 5000
-  twapi::send_keys "[string repeat {{DOWN}} $nm1]{MENU}hco"
   if { ("" == [set h [  \
             _TMP_send_cmd_keys_in_current_window \
                                   "[string repeat {{DOWN}} $nm1]{MENU}hco" \
