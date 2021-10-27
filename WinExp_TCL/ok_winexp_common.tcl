@@ -273,30 +273,30 @@ proc ::ok_winexp::focus_window_and_jump_to_top {targetHwnd}  {
 proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
   set nm1 [expr $n-1]
 # set keySeq "{MENU}hsa{ESC}{ESC}{DOWN}{HOME}[string repeat {{DOWN}} $nm1]{MENU}hco"
-  set keySeq "{MENU}hsa"
+  set keySeq "{MENU}hsa{DOWN}{HOME}[string repeat {{DOWN}} $nm1]"
   if { ("" == [set h [  \
             focus_window_and_send_cmd_keys $keySeq \
                                            "copy file #$n" $targetHwnd 0]]) }  {
     return  "";  # error already printed
   }
   
-  # OK_TMP:
-  after 1000; # !!! 5000 did work; 1000 did work; 0 causes failure !!!
-  if { ("" == [set h [  \
-            _TMP_send_cmd_keys_in_current_window "{DOWN}{HOME}" \
-                                           "copy file #$n" $targetHwnd 0]]) }  {
-    return  "";  # error already printed
-  }
+  #~ # OK_TMP:
+  #~ #after 1000; # !!! 5000 did work; 1000 did work; 0 causes failure !!!
+  #~ if { ("" == [set h [  \
+            #~ _TMP_send_cmd_keys_in_current_window "{DOWN}{HOME}" \
+                                           #~ "copy file #$n" $targetHwnd 0]]) }  {
+    #~ return  "";  # error already printed
+  #~ }
+
+  #~ #after 1000
+  #~ if { ("" == [set h [  \
+            #~ _TMP_send_cmd_keys_in_current_window \
+                                  #~ "[string repeat {{DOWN}} $nm1]" \
+                                  #~ "copy file #$n" $targetHwnd 0]]) }  {
+    #~ return  "";  # error already printed
+  #~ }
 
   after 1000
-  if { ("" == [set h [  \
-            _TMP_send_cmd_keys_in_current_window \
-                                  "[string repeat {{DOWN}} $nm1]" \
-                                  "copy file #$n" $targetHwnd 0]]) }  {
-    return  "";  # error already printed
-  }
-
-  after 5000
   if { ("" == [set h [  \
             _TMP_send_cmd_keys_in_current_window \
                                   "{MENU}hco" \
