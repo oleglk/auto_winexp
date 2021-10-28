@@ -279,26 +279,10 @@ proc ::ok_winexp::focus_window_and_copy_n {targetHwnd n}  {
                                            "copy file #$n" $targetHwnd 0]]) }  {
     return  "";  # error already printed
   }
-  
-  #~ # OK_TMP:
-  #~ #after 1000; # !!! 5000 did work; 1000 did work; 0 causes failure !!!
-  #~ if { ("" == [set h [  \
-            #~ _TMP_send_cmd_keys_in_current_window "{DOWN}{HOME}" \
-                                           #~ "copy file #$n" $targetHwnd 0]]) }  {
-    #~ return  "";  # error already printed
-  #~ }
 
-  #~ #after 1000
-  #~ if { ("" == [set h [  \
-            #~ _TMP_send_cmd_keys_in_current_window \
-                                  #~ "[string repeat {{DOWN}} $nm1]" \
-                                  #~ "copy file #$n" $targetHwnd 0]]) }  {
-    #~ return  "";  # error already printed
-  #~ }
-
-  after 1000
+  # sequences are split to provide for delay before <Alt> ({MENU})
   if { ("" == [set h [  \
-            _TMP_send_cmd_keys_in_current_window \
+            _send_cmd_keys_in_current_window \
                                   "{MENU}hco" \
                                   "copy file #$n" $targetHwnd 0]]) }  {
     return  "";  # error already printed
@@ -541,28 +525,9 @@ proc ::ok_winexp::focus_window {context targetHwnd {reportSuccess 0}}  {
 # TODO: The sequence of {press-Alt, release-Alt, press-Cmd-Key} is not universal
 proc ::ok_winexp::focus_window_and_send_cmd_keys {keySeqStr descr targetHwnd \
                                                   {reportSuccess 1}} {
-  set descr "sending key-sequence {$keySeqStr} for '$descr'"
-  set subSeqList [_split_key_seq_at_alt $keySeqStr]
   if { 1 == [focus_window "focus for $descr" $targetHwnd 0] }  {
-    set wndBefore [expr {($targetHwnd == 0)? [twapi::get_foreground_window] : \
-                                        $targetHwnd}];   # to detect focus loss
-    after 1000;  # 300 didn't work?
-    if { [complain_if_focus_moved $wndBefore $descr 1] }  { return  "" }
-    if { 0 == [llength $subSeqList] }   {
-      twapi::send_keys $keySeqStr
-     } else {
-      set beforeFirst 1;  # provide for delay between subsequences
-      foreach subSeq $subSeqList  {
-set ::TMP_LAST__subSeq $subSeq
-        if { !$beforeFirst }  { after 1000;  set beforeFirst 0 }; # 500 didn't work?
-        twapi::send_keys {{MENU}}
-        after 2000;  # wait A LOT after ALT;  2000 did work; 1500 didn't work?
-        twapi::send_keys $subSeq
-      }
-     }
-    after 500; # avoid an access denied error
-    if { $reportSuccess }  { puts "-I- Success $descr" }
-    return  [twapi::get_foreground_window]
+    return  [_send_cmd_keys_in_current_window $keySeqStr $descr $targetHwnd \
+                                                                $reportSuccess]
   }
   puts "-E- Failed $descr";         return  ""
 }
@@ -572,7 +537,7 @@ set ::TMP_LAST__subSeq $subSeq
 # If 'targetHwnd' given, first focuses this window
 # Returns handle of resulting window or "" on error.
 # TODO: The sequence of {press-Alt, release-Alt, press-Cmd-Key} is not universal
-proc ::ok_winexp::_TMP_send_cmd_keys_in_current_window {keySeqStr descr targetHwnd \
+proc ::ok_winexp::_send_cmd_keys_in_current_window {keySeqStr descr targetHwnd \
                                                   {reportSuccess 1}} {
   set descr "sending key-sequence {$keySeqStr} for '$descr'"
   set subSeqList [_split_key_seq_at_alt $keySeqStr]
