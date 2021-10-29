@@ -213,7 +213,7 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
 proc ::ok_winexp::read_native_folder_path_in_current_window {}  {
   # type Alt-d, then copy the path into clipboard
   twapi::send_keys {%d};  # focus path entry; dir-path should become selected
-  after 2500; # 3000 did work; 1000 caused "The parameter is incorrect" error
+  after 1500; # 2500 did work; 1000 caused "The parameter is incorrect" error
   twapi::send_keys {^c};  # filename-entry (should be selected) => clipboard
   after 200; # 3000 did work; 1000 caused "Access is denied" error
   set dirPath [::twapi::read_clipboard_text -raw FALSE]
@@ -225,7 +225,7 @@ proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName \
                                                       {expectedNewLeafName ""}}  {
   # type Alt-d, then append to the path
   twapi::send_keys {%d};  # focus path entry; dir-path should become selected
-  after 1000; # 3000 did work
+  after 500; # 1000 did work
   twapi::send_keys {{END}};  # filename-entry should be selected => jump to end
   after 500; # 1000 did work
   twapi::send_input_text "\\$folderLeafName"
@@ -543,7 +543,7 @@ proc ::ok_winexp::_send_cmd_keys_in_current_window {keySeqStr descr targetHwnd \
   set subSeqList [_split_key_seq_at_alt $keySeqStr]
   set wndBefore [expr {($targetHwnd == 0)? [twapi::get_foreground_window] : \
                                       $targetHwnd}];   # to detect focus loss
-  after 1000;  # 300 didn't work?
+  after 500;  # 1000 worked, 300 didn't work?
   if { [complain_if_focus_moved $wndBefore $descr 1] }  { return  "" }
   if { 0 == [llength $subSeqList] }   {
     twapi::send_keys $keySeqStr
