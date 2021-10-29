@@ -64,7 +64,7 @@ proc ::ok_winexp::start_src {exePath srcDirPath appName srcWndTitle}  {
   set wndDescr "locating window of $WINEXP_APP_NAME in directory '$srcDirPath'"
   # treat case of multiple matches
   for {set attemptsLeft 20} {$attemptsLeft > 0} {incr attemptsLeft -1}  {
-    after 500
+    after 500;  # should't be reduced
     set wndsAfter [twapi::find_windows -text "$SRC_WND_TITLE" \
                                         -toplevel 1 -visible 1]
     if { [llength $wndsAfter] > 0 }  {
@@ -551,13 +551,13 @@ proc ::ok_winexp::_send_cmd_keys_in_current_window {keySeqStr descr targetHwnd \
     set beforeFirst 1;  # provide for delay between subsequences
     foreach subSeq $subSeqList  {
 set ::TMP_LAST__subSeq $subSeq
-      if { !$beforeFirst }  { after 1000;  set beforeFirst 0 }; # 500 didn't work?
+      if { !$beforeFirst }  { after 500;  set beforeFirst 0 }; # 1000 worked
       twapi::send_keys {{MENU}}
-      after 2000;  # wait A LOT after ALT;  2000 did work; 1500 didn't work?
+      after 1500;  # wait A LOT after ALT;  2000 did work
       twapi::send_keys $subSeq
     }
    }
-  after 500; # avoid an access denied error
+  after 500; # avoid "access denied" error
   if { $reportSuccess }  { puts "-I- Success $descr" }
   return  [twapi::get_foreground_window]
 }
@@ -576,7 +576,7 @@ proc ::ok_winexp::check_for_windows_inexistent {waitSec titlesList} {
         return  0
       }
     }
-    after 500
+    after 500;  # should't be reduced
   }
   puts "-I- End checking for undesired popup windows"
   return  1
@@ -589,7 +589,7 @@ proc ::ok_winexp::wait_for_windows_inexistent {waitSec titlesList} {
   set nAttempts [expr $waitSec / 0.5];  # check twice in a second
   puts "-I- Begin waiting for popup windows inexistance (up to $waitSec sec)..."
   for {set i 0} {$i < $nAttempts} {incr i}   {
-    after 500
+    after 500;  # should't be reduced
     set cnt 0
     foreach titleStr $titlesList  {
       set wnds [twapi::find_windows -text "$titleStr" \
