@@ -215,7 +215,7 @@ proc ::ok_winexp::read_native_folder_path_in_current_window {}  {
   twapi::send_keys {%d};  # focus path entry; dir-path should become selected
   after 1500; # 2500 did work; 1000 caused "The parameter is incorrect" error
   twapi::send_keys {^c};  # filename-entry (should be selected) => clipboard
-  after 200; # 3000 did work; 1000 caused "Access is denied" error
+  after 1500; # 3000 did work; 1000, 500 caused "Access is denied" error
   set dirPath [::twapi::read_clipboard_text -raw FALSE]
   return  $dirPath
 }
