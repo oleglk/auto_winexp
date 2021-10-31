@@ -210,14 +210,27 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
 }
 
 
-proc ::ok_winexp::read_native_folder_path_in_current_window {}  {
-  # type Alt-d, then copy the path into clipboard
-  twapi::send_keys {%d};  # focus path entry; dir-path should become selected
-  after 1500; # 2500 did work; 1000 caused "The parameter is incorrect" error
-  twapi::send_keys {^c};  # filename-entry (should be selected) => clipboard
-  after 1500; # 3000 did work; 1000, 500 caused "Access is denied" error
-  set dirPath [::twapi::read_clipboard_text -raw FALSE]
-  return  $dirPath
+proc ::ok_winexp::read_native_folder_path_in_current_window {{nAttempts 8}}  {
+  for {set i 1} {$i <= $nAttempts} {incr i 1}   {
+    set tclExecResult [catch { ;  # exceptions to detect read failures
+      # type Alt-d, then copy the path into clipboard
+      twapi::send_keys {%d};  # focus path entry; dir-path should become selected
+      after 1500; # 2500 did work; 1000 caused "The parameter is incorrect" error
+      twapi::send_keys {^c};  # filename-entry (should be selected) => clipboard
+      after 1500; # 3000 did work; 1000, 500 caused "Access is denied" error
+      set dirPath [::twapi::read_clipboard_text -raw FALSE]
+      return  $dirPath
+    }  evalExecResult]
+    if { $tclExecResult != 0 } {
+      after 1000
+      twapi::send_keys {{ESC}}
+      after 1000
+      continue;   # go on with more attempts
+    }
+    puts "-W- Failure to read folder path not detected properly"
+  }
+  puts "-E- Failed reading folder path - $nAttempts attempt(s)"
+  return  0
 }
 
 
