@@ -101,7 +101,10 @@ proc ::ok_winexp::locate_src {appName wndTitle}  {
                                                           $SRC_HWND] }  {
       return  0;  # error already printed
   }
-  set srcDirPathNt [read_native_folder_path_in_current_window]
+  if { 0 == [set srcDirPathNt [read_native_folder_path_in_current_window]] }  {
+    #puts "-E- Aborting - failed reading current window's folder path"
+    return  0
+  }
   puts "-D- Native folder path in window '$wndTitle' is: '$srcDirPathNt'"
   set SRC_DIR_PATH [file normalize $srcDirPathNt]
   
@@ -211,6 +214,7 @@ proc ::ok_winexp::make_dst_subfolder {dstLeafDirName}  {
 
 
 proc ::ok_winexp::read_native_folder_path_in_current_window {{nAttempts 8}}  {
+  set dirPath 0
   for {set i 1} {$i <= $nAttempts} {incr i 1}   {
     set tclExecResult [catch { ;  # exceptions to detect read failures
       # type Alt-d, then copy the path into clipboard
@@ -222,14 +226,17 @@ proc ::ok_winexp::read_native_folder_path_in_current_window {{nAttempts 8}}  {
       return  $dirPath
     }  evalExecResult]
     if { $tclExecResult != 0 } {
+      if { $dirPath != 0 }  {
+        return  $dirPath;   # anyway...
+      }
       after 1000
       twapi::send_keys {{ESC}}
       after 1000
       continue;   # go on with more attempts
     }
-    puts "-W- Failure to read folder path not detected properly"
+    puts "-W- Failure to read folder path not detected properly (error = '$tclExecResult')"
   }
-  puts "-E- Failed reading folder path - $nAttempts attempt(s)"
+  puts "-E- Failed reading current window's folder path - $nAttempts attempt(s) (error = '$tclExecResult')"
   return  0
 }
 
@@ -245,7 +252,10 @@ proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName \
   after 500; # 1000 did work
   twapi::send_keys {{ENTER}}
   after 500; # 1000 did work
-  set newNativePath [read_native_folder_path_in_current_window]
+  if { 0 == [set newNativePath [read_native_folder_path_in_current_window]] } {
+    #puts "-E- Aborting - failed reading current window's folder path"
+    return  ""
+  }
   set newDirPath [file normalize $newNativePath]
   set newLeafDirName [file tail $newDirPath]
   if { ($expectedNewLeafName == "") && ($folderLeafName != "..") }  {
@@ -346,7 +356,10 @@ proc ::ok_winexp::copy_all_from_src_to_dst {}  {
   variable DST_HWND
   variable DST_WND_TITLE
   # TODO: check if all defined
-  set srcWinDirPathNt [read_native_folder_path_in_current_window]
+  if { 0 == [set srcWinDirPathNt [read_native_folder_path_in_current_window]]} {
+    #puts "-E- Aborting - failed reading current window's folder path"
+    return  0
+  }
   set srcWinDirPath [file normalize $srcWinDirPathNt]
   set srcFiles [glob -nocomplain -directory $srcWinDirPath -types f {*}]
   set nFiles [llength $srcFiles]
@@ -422,8 +435,12 @@ proc ::ok_winexp::copy_subfolder_from_src_to_dst {leafDirName}  {
   if { 0 == [focus_window "focus for $sfDescr" $SRC_HWND 0] }  {
       return  -1;  # error already printed
   }
-  set oldSrcLeafName  [file tail [file normalize \
-                                  [read_native_folder_path_in_current_window]]]
+  if { 0 == [set oldSrcNt [read_native_folder_path_in_current_window]] }  {
+    #puts "-E- Aborting - failed reading current window's folder path"
+    return  -1
+  }
+
+  set oldSrcLeafName  [file tail [file normalize $oldSrcNt]]
   set newDirPath [change_path_to_subfolder_in_current_window $leafDirName ""]
   if { $newDirPath == "" }  {
     return  -1;   # error already printed
