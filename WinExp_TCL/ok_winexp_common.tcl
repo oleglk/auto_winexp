@@ -243,29 +243,32 @@ proc ::ok_winexp::read_native_folder_path_in_current_window {{nAttempts 8}}  {
 
 proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName \
                                                       {expectedNewLeafName ""}}  {
-  # type Alt-d, then append to the path
-  twapi::send_keys {%d};  # focus path entry; dir-path should become selected
-  after 500; # 1000 did work
-  twapi::send_keys {{END}};  # filename-entry should be selected => jump to end
-  after 500; # 1000 did work
-  twapi::send_input_text "\\$folderLeafName"
-  after 500; # 1000 did work
-  twapi::send_keys {{ENTER}}
-  after 500; # 1000 did work
-  if { 0 == [set newNativePath [read_native_folder_path_in_current_window]] } {
-    #puts "-E- Aborting - failed reading current window's folder path"
-    return  ""
+  set nAttempts 5
+  for {set i 1} {$i <= $nAttempts} {incr i 1}   {
+    # type Alt-d, then append to the path
+    twapi::send_keys {%d};  # focus path entry; dir-path should become selected
+    after 500; # 1000 did work
+    twapi::send_keys {{END}};  # filename-entry should be selected => jump to end
+    after 500; # 1000 did work
+    twapi::send_input_text "\\$folderLeafName"
+    after 500; # 1000 did work
+    twapi::send_keys {{ENTER}}
+    after 500; # 1000 did work
+    if { 0 == [set newNativePath [read_native_folder_path_in_current_window]] } {
+      #puts "-E- Aborting - failed reading current window's folder path"
+      return  ""
+    }
+    set newDirPath [file normalize $newNativePath]
+    set newLeafDirName [file tail $newDirPath]
+    if { ($expectedNewLeafName == "") && ($folderLeafName != "..") }  {
+      set expectedNewLeafName $folderLeafName
+    }
+    if { [string equal -nocase $newLeafDirName $expectedNewLeafName] }  {
+      return  $newDirPath
+    }
   }
-  set newDirPath [file normalize $newNativePath]
-  set newLeafDirName [file tail $newDirPath]
-  if { ($expectedNewLeafName == "") && ($folderLeafName != "..") }  {
-    set expectedNewLeafName $folderLeafName
-  }
-  if { ![string equal -nocase $newLeafDirName $expectedNewLeafName] }  {
-    puts "-E- Aborting - failed entering subfolder '$folderLeafName'; brought into '$newDirPath' instead"
-    return  ""
-  }
-  return  $newDirPath
+  puts "-E- Aborting - failed entering subfolder '$folderLeafName'; brought into '$newDirPath' instead"
+  return  ""
 }
 
 
