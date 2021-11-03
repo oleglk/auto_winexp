@@ -266,6 +266,7 @@ proc ::ok_winexp::change_path_to_subfolder_in_current_window {folderLeafName \
     if { [string equal -nocase $newLeafDirName $expectedNewLeafName] }  {
       return  $newDirPath
     }
+    after 1000
   }
   puts "-E- Aborting - failed entering subfolder '$folderLeafName'; brought into '$newDirPath' instead"
   return  ""
